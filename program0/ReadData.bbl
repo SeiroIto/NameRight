@@ -1,0 +1,15 @@
+\ifx\undefined\bysame
+\newcommand{\bysame}{\leavevmode\hbox to\leftmargin{\hrulefill\,\,}}
+\fi
+\begin{thebibliography}{xx}
+
+\harvarditem[Augustine-Adams]{Augustine-Adams}{1997}{Augustine1997}
+{\bf Augustine-Adams, Kif}, ``The beginning of wisdom is to call things by
+  their right names,'' {\it Southern California Review of Law \& Women's
+  Studies}, 1997, {\it 7}, 1.
+
+\harvarditem[MacDougall]{MacDougall}{1985}{MacDougall1985}
+{\bf MacDougall, Priscilla~Ruth}, ``The right of women to name their
+  children,'' {\it Law \& Inequality}, 1985, {\it 3}, 91.
+
+\end{thebibliography}

@@ -1,0 +1,97 @@
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git status
+On branch master
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        analysis/program/
+        papers/
+        program/
+        program0/
+        save/
+        source/
+
+nothing added to commit but untracked files present (use "git add" to track)
+
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git remote add origin https://github.com/SeiroIto/NameRight.git
+error: remote origin already exists.
+
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git push -u origin master
+
+
+
+Enumerating objects: 109, done.
+Counting objects: 100% (109/109), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (101/101), done.
+Writing objects: 100% (109/109), 1.02 MiB | 884.00 KiB/s, done.
+Total 109 (delta 24), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (24/24), done.
+remote:
+remote: Create a pull request for 'master' on GitHub by visiting:
+remote:      https://github.com/SeiroIto/NameRight/pull/new/master
+remote:
+To https://github.com/SeiroIto/NameRight.git
+ * [new branch]      master -> master
+branch 'master' set up to track 'origin/master'.
+
+## Then I looked up at GitHub and pushed Comparing Changes
+
+
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git add analysis/program/.
+
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git status
+On branch master
+Your branch is up to date with 'origin/master'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        new file:   analysis/program/figure/FirstYearDraftmapping_MRA_year-1.eps
+        new file:   analysis/program/figure/ReadDataTennessee Dunn v Palermo 1975 plot-1.png
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        papers/
+        program/
+        program0/
+        save/
+        source/
+
+git commit -m "Added a message 'I will add more' at the beginning of the page."
+
+
+## Need to change master to main to be consistent with GitHub (default is "main")
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (master)
+$ git branch -m master main
+
+## Something is wrong, I cannot push.
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (main)
+$  git push -u origin main
+To https://github.com/SeiroIto/NameRight.git
+ ! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'https://github.com/SeiroIto/NameRight.git'
+hint: Updates were rejected because the remote contains work that you do
+hint: not have locally. This is usually caused by another repository pushing
+hint: to the same ref. You may want to first integrate the remote changes
+hint: (e.g., 'git pull ...') before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+
+## I force the push.
+mihot@LAPTOP-NQF56JV9 MINGW64 /c/data/NameRight (main)
+$  git push -f origin main
+Enumerating objects: 117, done.
+Counting objects: 100% (117/117), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (108/108), done.
+Writing objects: 100% (117/117), 1.19 MiB | 2.04 MiB/s, done.
+Total 117 (delta 27), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (27/27), done.
+To https://github.com/SeiroIto/NameRight.git
+ + f908ca2...7b67828 main -> main (forced update)
+
+
+

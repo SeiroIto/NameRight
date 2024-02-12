@@ -1,0 +1,9 @@
+@articletitle={University of Chicago Law Review},
+author= {Emens, Elizabeth F. },
+title={Changing Name Changing: Framing Rules and the Future of Marital Names },
+journal={University of Chicago Law Review},
+volume={74},
+pages={761},
+year={2007},
+}
+

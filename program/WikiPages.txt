@@ -1,0 +1,28 @@
+Home
+
+This is the NameRight wiki.
+
+# What this research is about
+
+* Tests if woman's name right to keep/use the maiden name affects marrital status.  
+* $H_{A}$: Name right $\Rightarrow$ Divorce/marriage rate.  
+* Data: US state divorce/marriage data + Year of first affirmative case of name right.  
+* Identification design: Event study with two-way fixed effects.  
+* Finds: (to be filled)  
+
+
+
+----
+The legal origins of woman's name rights in the US
+
+# Abstract
+
+* The US follows the English common law tradition.  
+* The common law of England affirms woman's name rights except for fraudulent purposes or in the presence of statutes ruling otherwise. 
+* *Therefore,* there is no legal ground for rejecting the claim of women to use their maiden names after marriage for all the purposes.  
+
+# Early days
+
+# 1970's
+
+# Present days

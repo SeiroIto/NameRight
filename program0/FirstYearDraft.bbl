@@ -1,0 +1,35 @@
+\ifx\undefined\bysame
+\newcommand{\bysame}{\leavevmode\hbox to\leftmargin{\hrulefill\,\,}}
+\fi
+\begin{thebibliography}{xx}
+
+\harvarditem[Augustine-Adams]{Augustine-Adams}{1997}{Augustine1997}
+{\bf Augustine-Adams, Kif}, ``The beginning of wisdom is to call things by
+  their right names,'' {\it Southern California Review of Law \& Women's
+  Studies}, 1997, {\it 7}, 1.
+
+\harvarditem[Callaway and Sant'Anna]{Callaway and
+  Sant'Anna}{2020}{CallawaySantAnna2020}
+{\bf Callaway, Brantly and Pedro~H.C. Sant'Anna}, ``Difference-in-Differences
+  with multiple time periods,'' {\it Journal of Econometrics}, 2020.
+
+\harvarditem[Gorence]{Gorence}{1976}{Gorence1976}
+{\bf Gorence, Patricia~J.}, ``Women's Name Rights Comment,'' {\it Marquette Law
+  Review}, 1976, {\it 59}, 876.
+
+\harvarditem[MacClintock]{MacClintock}{2010}{MacClintock2010}
+{\bf MacClintock, Heather}, ``Sexism, surnames, and social progress: The
+  conflict of individual autonomy and government preferences in laws regarding
+  name changes at marriage,'' {\it Temple International \& Comparative Law
+  Journal}, 2010, {\it 24}, 277.
+
+\harvarditem[MacDougall]{MacDougall}{1985}{MacDougall1985}
+{\bf MacDougall, Priscilla~Ruth}, ``The right of women to name their
+  children,'' {\it Law \& Inequality}, 1985, {\it 3}, 91.
+
+\harvarditem[Rambachan and Roth]{Rambachan and Roth}{2023}{RambachanRoth2023}
+{\bf Rambachan, Ashesh and Jonathan Roth}, ``{A more credible approach to
+  parallel trends^^c2^^a0},'' {\it The Review of Economic Studies}, 02 2023.
+\newblock rdad018.
+
+\end{thebibliography}
