@@ -1798,69 +1798,6 @@ So the general idea for normalisation is:
 * Manually drop 2 periods (start and last periods of data) from `time` to incorporate time FE and a linear trend. One for a reference of own dummy variable, another to avoid collinearity with trend.  
 * Manually drop 1 state ("Hawaii") from `StateName` to incorporate state FE with a restriction $\bar{a}=0$, after setting $a_{i}=a_{i}-a_{Hawaii}$.  
 
-<details><summary>Click here to see dropping N1 and 15.</summary>
-```{r manually drop N1 and 15 from et, warning = F}
-obj = copy(dv)
-etdum <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et")
- #### change to easier-to-handle names
-setnames(etdum, grepout("-", colnames(etdum)), 
-  gsub("-", "N", grepout("-", colnames(etdum))))
- #### Subtract t-L, L=10 period to impose \bar{gamma}_{s<0} = 0
-negtime <- grepout("N", colnames(etdum))
-etdumpre <- etdum
-etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
-etdumpre[, etN10 := NULL]
-etterms <- paste(colnames(etdum), collapse = "+")
-#### Drop -1 and 15 from et
-etterms <- gsub("\\+etN1\\+", "+", etterms)
-ettermspre <- gsub("\\+et15", "", etterms)
-#obj[, StateName := factor(StateName, exclude=c('Hawaii', 'Florida', 'District Of Columbia'))]
-obj2 <- data.table(obj, etdum)
-obj3 <- data.table(obj, etdumpre)
-form1 <- paste0("v ~ -1+StateName+time+", etterms)
-form2 <- paste0("v ~ -1+trend+StateName+time+", etterms)
-form3 <- paste0("v ~ -1+trend+StateName+time+", ettermspre)
-r11 <- lm(form1, data = obj2)
-r21 <- lm(form2, data = obj2)
-r31 <- lm(form3, data = obj3)
-normalization <- c("TWFE", "TWFE trend", "TWFE trend pre-mean=0")
-Ci <- NULL
-for (i in 1:3) {
-  rr <- get(paste0("r", i, 1))
-  clus <- data.table(rr$model)[, StateName]
-  rrc <- clx(rr, cluster = clus, returnV = T)
-  clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
-  clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
-  clxci[, normalisation := normalization[i]]
-  Ci <- rbind(Ci, clxci)
-}
-Ci[, period := gsub("et", "", Coef)]
-Ci <- Ci[grepl("^.?\\d", period), ]
-Ci[, period := gsub("N", "-", period)]
-Ci[, period := as.numeric(period)]
-setcolorder(Ci,
- c("Coef", "Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5 %", "97.5 %", "period"))
-setnames(Ci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
-numcols <- c("beta", "CI_L", "CI_U", "period", "Std. Error", "t value", "Pr(>|t|)")
-Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
-strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
-Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
-Ci[grepl("mea", normalisation) & period < 0, mean(beta)]
-```
-```{r plot drop -1 15 from et, eval = T, echo = F, warning = F, fig.cap = "Impacts on divorce rates: Baseline with different normalisation", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
-ggplot(data = Ci, 
-  aes(x = period, y = beta, group = normalisation, 
-    color = normalisation, shape = normalisation, fill = normalisation)) + 
-  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
-    size = .3, position = position_jitterdodge(dodge = .5)) +
-  geom_line() +   ThisTheme +
-  scale_fill_viridis_d(end = .7)+
-  scale_colour_viridis_d(end = .7)+
-  scale_y_continuous(limits = c(-0.5, 2)) +
-  scale_x_continuous(limits = c(-24.5, 10.5)) +
-  geom_hline(yintercept = 0, colour = "green")
-```
-</details>
 
 ## Veryfying the code with simulated data
 
