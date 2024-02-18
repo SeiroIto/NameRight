@@ -1203,7 +1203,7 @@ In a regression with no intercept with mutilple factor variables, there is a rul
 
 ```{r try factor dummy variables, results = "hide"}
 set.seed(100)
-# 10 groups (a, .., t), 60 periods
+#### 10 groups (a, .., t), 60 periods
 dm1 <- factor(rep(letters[1:10], each = 60))
 trend <- rep(1:60, 10)
 dmf <- NULL
@@ -1729,7 +1729,7 @@ obj3 <- data.table(obj1, etdumpre)
 form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre)
 #### r22ee: TWFE with indiv trends, et restriction, dropping N1
 r22ee <- lm(as.formula(form2), data = obj3[as.numeric(as.character(time)) > 1960, ])
-## Add "TWFE itrend N15P10" to forder, paste N15P10 to r22
+#### Add "TWFE itrend N15P10" to forder, paste N15P10 to r22
 forder2 <- c(forder, "TWFE itrend N15P10", "TWFE itrend no N1 N15P10")
 forder2 <- gsub("i?trend et pos 2", "itrend et pos 2 N15P10", forder2)
 forder2 <- gsub("E et pos 2", "E et pos 2 N15P10", forder2)
@@ -1812,35 +1812,33 @@ So the general idea for normalisation is:
 dat <- fread(paste0(pathsource, "bacon_example.csv"))
   #### Let's create a more user-friendly indicator of which states received treatment
 dat[, treat := ifelse(is.na(`_nfd`), 0, 1)]
-  #### Create a "time_to_treatment" variable for each state, so that treatment is
-  #### relative for all treated units. For the never-treated (i.e. control) units,
-  #### we'll arbitrarily set the "time_to_treatment" value at 0. This value 
-  #### doesn't really matter, since it will be canceled by the treat==0 interaction
-  #### anyway. But we do want to make sure they aren't NA, otherwise feols would drop 
-  #### these never-treated observations at estimation time and our results will be 
-  #### off.
 dat[, time_to_treat := ifelse(treat==1, year - `_nfd`, 0)]
+```
+`fixest` has `i` function that deals with interaction terms. By default, reference is the first level. Here, -1 is chosen explicitly.
+```{r bacon fixest}
 library(fixest)
 twfe1 = feols(asmrs ~ i(time_to_treat, treat, ref = -1) | 
      #### Our key interaction: time × treatment status
      stfips + year,      #### FEs
      cluster = ~stfips, #### Clustered SEs
      data = dat)
+```
+```{r bacon dummy matrix}
 ttdum <- makeDummyFromFactor(factor(dat[, time_to_treat]), 
   nameprefix = "tt", reference = NULL)
 setnames(ttdum, colnames(ttdum), gsub("-", "N", colnames(ttdum)))
 ttterms <- paste(colnames(ttdum), collapse = "+")
-ttterms2 <- gsub("\\+ttN1\\+", "+", ttterms)
-ttterms3 <- gsub("ttN21\\+", "", ttterms)
+ttterms2 <- gsub("\\+ttN1\\+", "+", ttterms) # ttN21+...+ttN2+tt0+tt1+...
+ttterms3 <- gsub("ttN21\\+", "", ttterms) # ttN20+...+ttN1+tt0+tt1+...
 dat[, time := factor(year)]
 dat[, id := factor(stfips)]
 dt <- data.table(dat, ttdum)
-#### 2: no intercept, drop et=-1
-#### 3: with intercept, none dropped (so N21 gets to drop)
-#### 4: with intercept, drop et=-1
+#### 2: no intercept+ttterms2, et=-1 is dropped
+#### 3: with intercept+ttterms2, et=-1, id=1 are dropped
+#### 4: with intercept+ttterms3, et=-21, id=1 are dropped
 twfe2 <- lm(as.formula(paste0("asmrs ~ -1+id+time+", ttterms2)), data = dt)
-twfe3 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms3)), data = dt)
-twfe4 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms2)), data = dt)
+twfe3 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms2)), data = dt)
+twfe4 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms3)), data = dt)
 tc1 <- twfe1$coeff
 names(tc1) <- gsub("ti.*::", "tt", names(tc1))
 names(tc1) <- gsub(":treat", "", names(tc1))
@@ -1851,7 +1849,7 @@ for (i in 1:4) {
     tc <- tw$coeff
   } else tc <- tc1
   tc <- tc[grep("tt", names(tc))]
-  tc <- data.table(spec = c("fixest", "no int, -1", "int, -21", "int, -1")[i], 
+  tc <- data.table(spec = c("fixest", "no int, -1", "int, -1, id=1", "int, -21, id=1")[i], 
     coef = names(tc), val = tc)
   assign(paste0("tcf", i), tc)
 }
@@ -1862,11 +1860,31 @@ tcf[, et := as.numeric(et)]
 tcf[et == -21, ]
 tcf[et == -1, ]
 ```
+```{r CIs fixest and others}
+library(clubSandwich)
+ci1 <- data.table(cbind(names(twfe1$coeff), twfe1$coeff, stats::confint(twfe1)))
+ci2 <- lapply(list(twfe2, twfe3, twfe4), function(x) 
+  clubSandwich::conf_int(x, vcov = "CR2", level = 0.95, 
+  test = "Satterthwaite", cluster = dt[, id], coefs = "All", p_values = T))
+ci22 <- lapply(ci2, function(x) data.table(x)[, c("Coef", "beta", "CI_L", "CI_U")])
+ci22 <- lapply(ci22, function(x) x[grepl("tt", Coef), ])
+ci22 <- lapply(ci22, function(x) x[, et := gsub("tt", "", Coef)])
+ci22 <- lapply(ci22, function(x) x[, et := as.numeric(gsub("N", "-", et))])
+ci22 <- lapply(1:length(ci22), function(i) ci22[[i]][, estmethod := i+1])
+setnames(ci1, c("Coef", "beta", "CI_L", "CI_U"))
+ci1[, et := gsub(".*::", "", Coef)]
+ci1[, et := as.numeric(gsub(":treat", "", et))]
+ci1[, estmethod := 1]
+ci22 <- rbindlist(ci22)
+ci <- rbindlist(list(ci1, ci22), use.names = T, fill = T)
+ci[, estmethod := factor(estmethod, labels = c("fixest", "lm et=-1", "lm et=-1 id=1", "lm et=-21 id=1"))]
+```
 ```{r plot fixest compare, echo = F, warning = F, fig.cap = "Parameter estimates: `fixest` and other specifications", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
-ggplot(data = tcf, 
-  aes(x = et, y = val, group = spec, color = spec, 
-    shape = spec, fill = spec)) + 
-  geom_point(size = 1.75, position = position_jitterdodge(dodge = .4)) +
+ggplot(data = ci, 
+  aes(x = et, y = beta, group = estmethod, color = estmethod, 
+    shape = estmethod, fill = estmethod)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .3, position = position_jitterdodge(dodge = .5)) +
   geom_line() +   
   ThisTheme + theme(
     legend.text=element_text(size=10),
@@ -1874,11 +1892,11 @@ ggplot(data = tcf,
   ) +
   scale_fill_viridis_d(end = .7)+
   scale_colour_viridis_d(end = .7)+
-  #scale_y_continuous(limits = c(-6, 5)) +
+  scale_y_continuous(limits = c(-22, 50)) +
   scale_x_continuous(limits = c(-22, 28)) +
   geom_hline(yintercept = 0, colour = "green")
 ```
-We see that `fixest`, "with intercept, drop t=-1" are equivalent, "with intercept, drop t=-21" gives the same estimates but without $t=-21$ coefficient $\gamma_{-21}$, and "no intercept, drop t=-1" is pararell shift to the above.  
+We see that `fixest`, "lm et=-1", "lm et=-1 id=1" are equivalent, "lm et=-21" gives the estimates with a pararell shift to the above, and with larger SEs.  
 
 ### Using Bacon data with trend
 
