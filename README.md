@@ -1,5 +1,5 @@
 # NameRight
 
-A [workflowr][] project.
+This is a repo for women's name rights. I am estimating their impacts on marrital status changes using US state data. 
 
-[workflowr]: https://github.com/workflowr/workflowr
+Here is a [file](https://seiroito.github.io/NameRight/program/Destat_Tufte.html) with estimation code.
