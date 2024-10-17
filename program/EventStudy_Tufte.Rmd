@@ -1,0 +1,1565 @@
+---
+title: "Event study design:\nHow normalisation affects estimation and inference"
+author: "Seiro Ito"
+date: "`r format(Sys.time(), '%Y年%m月%d日 %R')`"
+output:
+  tufte::tufte_html:
+    tufte_features: ["fonts", "background", "italics"]
+    citation_package: natbib
+    toc: true
+  pdf_document:
+     latex_engine: xelatex
+     fig_width: 7
+     fig_height: 6
+     fig_caption: true
+header-includes:
+    - \usepackage{amsmath}
+    - \usepackage{amssymb}
+    - \usepackage{amsfonts}
+    - \usepackage{bookmark} 
+    - \usepackage{natbib} 
+    - \usepackage{xltxtra} 
+    - \usepackage{zxjatype} 
+    - \usepackage[ipa]{zxjafont} 
+    - \usepackage{marginnote}
+bibliography: c:/seiro/settings/Tex/seiro.bib
+urlcolor: green
+linkcolor: blue
+link-citations: yes
+#### c:\seiro\languages\R\R-4.2.1\bin\x64\Rscript.exe -e "path <- 'c:/data/NameRight/program/'; rmarkdown::render('c:/data/NameRight/program/EventStudy_Tufte.Rmd')"
+# path <- "c:/data/NameRight/"; rmarkdown::render(paste0(path, "program/EventStudy_Tufte.Rmd"))
+#### rmarkdown::render(paste0(path, "program/EventStudy_Tufte.Rmd"), output_format = "pdf_document")
+#### cd c:/data/NameRight/
+#### git init
+#### git config --global user.name "SeiroIto"
+#### git remote add origin https://github.com/SeiroIto/NameRight.git  ## specify remote
+#### git add c:/data/NameRight/program c:/data/NameRight/save   ## this adds 
+#### git rm --cached -r c:/data/NameRight/source/  ## untrack files in source folder
+#### git rm --cached -r c:/data/NameRight/program/clubSandwich-main/
+#### git rm --cached -r c:/data/NameRight/program/cached/
+#### git rm --cached -r c:/data/NameRight/save/*.qs
+#### git rm --cached -r c:/data/NameRight/save/*.prn
+#### git commit -am "initial commit"
+#### git ls-tree -r main --name-only ## list all tracked files
+#### git push -f origin main  ## push files to remote
+#### if error with push fatal: the remote end hung up unexpectedly, run below
+#### git config http.postBuffer 2000000000
+#### git push -f origin main  ## push files to remote
+---
+<!-- Using 2 byte characters causes an error in dynamic deploy in Jekylle via git push. knitting works fine.
+Error reading file /github/workspace/program0/EventStudy_Tufte.Rnw: invalid byte sequence in UTF-8 
+-->
+
+```{css, echo=F}
+.SeiroBenign {
+  background-color: #FFEBCD;
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+.SeiroLightGreen {
+  background-color: #D0F0C0; /* Tea green */
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  font-family: Noto S	ans;
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+```
+```{r setup, include=FALSE} 
+#### include = F <==> echo=F & results = F
+library(tufte)
+#### invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'), 
+  margin_references = TRUE,
+  # remove leading hashes in html output
+  comment = "", class.source = "SeiroBenign", class.output = "SeiroLightGreen")
+options(htmltools.dir.version = FALSE)
+```
+<!-- reading this file makes echo = F and results = F for reasons I don't understand -->
+```{r option setting 1, eval = F, cache = F, child='c:/migrate/R/rmarkdownPreamble/rmarkdown_initial_option_setting_chunk.Rmd'}
+```
+```{r option setting 2, echo = F, cache = F, warning = F, results = "hide"}
+knitr::opts_knit$set(base.dir = path)
+knitr::opts_chunk$set(
+  fig.path=paste0(path, '/program/figure/'), 
+  cache.path=paste0(path, '/program/cache/ReadData'), 
+  cache = FALSE, echo = TRUE, results = 'markup', eval = T,
+  tidy.opts=list(blank=FALSE, width.cutoff=40))
+options(digits = 6, width = 80)
+library(data.table)
+library(qs)
+pathprogram <- paste0(path, "program/");  
+pathsource <- paste0(path, "source/")
+pathsave <- paste0(path, "save/")
+pathfigure <- paste0(pathprogram, "figure/")
+pathsavefigure <- paste0(pathsave, "figure/")
+dir.create(pathsave)
+dir.create(pathsavefigure)
+source("c:/seiro/settings/Rsetting/panel_estimator_functions.R")
+source("c:/seiro/settings/Rsetting/functions.R")
+source(paste0(pathprogram, "tabulate_est_IPUMS.R"))
+```
+```{css, echo=FALSE}
+/* Define a margin before hX (header level X) element */
+h1  {
+  margin-top: 3ex;
+  margin-bottom: 3ex;
+  /* background: #c2edff; */ /*背景色*/
+  padding: 0.5em;/*文字まわり（上下左右）の余白*/
+}
+h2  {
+  margin-top: 2ex;
+  margin-bottom: 2ex;
+  padding: 0.5em;/*文字周りの余白*/
+  color: #010101;/*文字色*/
+  /* background: #eaf3ff; */ /*背景色*/
+  /* border-bottom: solid 3px #516ab6; */ /*下線*/
+}
+```
+\def\Perp{\mkern2mu\rotatebox[origin=c]{90}{$\models$}\mkern2mu}
+\newcommand{\mpage}[2]{\begin{minipage}[t]{#1}#2\end{minipage}}
+\newcommand{\cnvp}{\stackrel{p}{\longrightarrow}}
+\newcommand{\cnvd}{\stackrel{d}{\longrightarrow}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\E}{{\Large\varepsilon}}
+\newcommand{\NU}{{\Large\nu}}
+\newcommand{\0}{{\mathbf{0}}}
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+\newcommand{\bfbeta}{\boldsymbol{\beta}}
+\newcommand{\bfgamma}{\boldsymbol{\gamma}}
+\newcommand{\bftheta}{\boldsymbol{\theta}}
+\newcommand{\bfeta}{\boldsymbol{\eta}}
+\newcommand{\bfmu}{\boldsymbol{\mu}}
+\newcommand{\bflambda}{\boldsymbol{\lambda}}
+\newcommand{\ind}{\mathrel{\perp\!\!\!\!\perp}}
+\renewcommand{\thefootnote}{*\arabic{footnote}}
+
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\setlength{\parindent}{1em}
+\vspace{2ex}
+
+
+```{r rprojroot setting, eval = T, echo = F, results = "hide"}
+library(rprojroot)
+#### Specify a path/to/file relative to the root
+find_root_file("source/CDC-NCHS", "divorce.prn", criterion = has_file(".git/index"))
+(Root <- find_root(has_file(".git/index")))
+FPath <- function(SubFolder, FileName) 
+  find_root_file(SubFolder, FileName, criterion = has_file(".git/index"))
+FPath("source/CDC-NCHS", "divorce.prn")
+```
+# Read marriage/divorce files
+
+## NCH marriage data is at state level but complete
+
+
+
+# Estimation
+
+## Identification strategy
+
+Consider an event-study design for a unit $i$ that starts being treated at $\tau$:
+\[
+y_{i,t}=a_{t}+a_{i}+\sum_{s=-L}^{G}\gamma_{j}D_{i,t+s}+\bfb'\bfx_{i,t}+e_{i,t},
+\]
+where $D_{i,t+s}=0,1$ is an indicator function equalts to 1 if $i$ is treated in $t+s$ with $s=-L, -L+1, \cdots, -1, 0, 1, 2, \cdots, G-1, G$. Given $i$ starts getting treated at $\tau$, $D_{i,t+s}=0$ for $t+s<\tau$, $D_{i, t+s}=1$ for $t+s\geqslant \tau$. The indicator $t$ measures the calendar time, $s$ measures the event time (time-since-event). So we know that time-since-event $s$ is equal to $t-\tau$, or $s=t-\tau$ or $t=s+\tau$. $\bfx_{it}$ is a vector of exogenous covariates.  
+
+Our data structure is the hybrid type based on the classification by @Miller2023: 
+
+* Treatment dates vary by units.  
+* There are never-treated units. 
+
+The key identifying assumptions are:  
+
+1. In the absence of treatments, all the units share the same time effects $a_{t}$ (conditional on unit fixed effects $a_{i}$ and covariates $\bfx_{i,t}$).  
+1. Selection of treatment timing, selection of treated or never-treated (by the end of our observation period) units are as good as random, given time and unit fixed effects and covariates.  
+
+
+List 1. is the common trend assumption used in difference-in-differences. 2. is not necessary if 1. strictly holds, because deviation from the common trend, when there is one, is all we need to estimate the impacts.  
+
+If an intercept term is used, or, equivalently, if state FEs are estimated for all the states, the treatment effect parameters $\bfgamma$ need to drop one level (a "reference" period) to avoid multicollinearity. $\bfgamma$ trace out changes before and after the event and show differences relative to the dropped/reference event time. The common reference choice is to set the mean of entire pre-treatment or a period before event ot be zero, $\bar{\gamma}_{j<0}=0$, or $\gamma_{-1}=0$. 
+
+To avoid multicollinearity, we need to drop one period FE from $a_{t}$. 
+
+If we want all unit FEs to be deviation from the overall mean, one can extract the mean from LHS and regress on TWFE without an intercept.  
+
+The number of pre-treatment periods need to balance efficiency and bias tradeoff. Longer perods provide efficiency, but it risks the inclusion of irrelevant periods, such as under marital market disruption immediately after the world war II (1946 onwards). Number of states reporting marriages (*Marriage Reporting Area*) increased from 32 (1957) to 37 (1964). Non MRA states also report data by using central files or survey estimation. In 1960, 33 MRA states, 8 states and DC hold central files of marriage records to construct data. In 1961-63, 35 MRA states `r 51-35-6` states with central files. In 1964, 37 MRA states, `r 51-37-7` states^[Why decreased?] have central files. 
+
+46 states report number of marriages performed, 5 States and DC report the number of marriage licenses issued using central files. Texas only reports data for 10 counties.  
+
+To avoid the bias while not throwing away too much of efficiency, we choose 1961, 14 years before the landmark *Dunn v Palermo*, with 45 states in marriage data, as the starting year. 
+
+@Miller2023 recommends to base entire pre-period to be the reference period.
+
+
+```{r read NHS data file}
+m2L <- qread(FPath("save", "m2L.qs"))
+d12L <- qread(FPath("save", "d12L.qs"))
+m2L <- m2L[!grepl("Cent|Mid|Mount|Eng|east|Pac|^South$|Atl?a|Unit|^West$", StateName), ]
+d12L <- d12L[!grepl("Cent|Mid|Mount|Eng|east|Pac|^South$|Atl?a|Unit|^West$", 
+  StateName), ]
+destat(m2L[, .(NumberOfStates=.N, NumberOfEntries=length(v[!is.na(v)])), by = time])
+```
+
+@Miller2023 recommends to base entire pre-period to be the reference period. In the paper's accompanying code, he uses `cnsreg` of stata. This is to impose a linear restriction on the estimated parameters in OLS using minimization of the Lagrangian:
+\[
+\mathcal L = SSE+\lambda [\bar{\gamma}_{pre}].
+\]
+Stata's manual on [`cnsreg`](https://www.stata.com/manuals/rcnsreg.pdf) states that it uses a linear formula which should be similar to [@Hansen2022, 8.8](https://juergenmeinecke.github.io/EMET8014/_downloads/a02e6ab05c5e8d4cad903b9c8fd339cc/Econometrics_by_Bruce_Hansen.pdf).^[Because this code is proprietary, one cannot see what it does.] 
+
+However, in the current case, constrained least squares is not necessary. One can impose a set of nonzero constraints on $\gamma_{s}$ for $s<0$. Setting and substituting $\bar{\gamma}_{pre}=0$ changes the estimating equation:
+\begin{equation}
+\bar{\gamma}_{pre}=0 \quad \Leftrightarrow \quad \gamma_{-L}=-\sum_{s=-(L-1)}^{-1}\gamma_{s},
+\tag{c}\label{eqnconst}
+\end{equation}
+so
+\[
+\begin{aligned}
+y_{i,t}
+&=
+a_{t}+a_{i}+\sum_{s=-L}^{G}\gamma_{s}D_{i,t+s}+\bfb'\bfx_{i,t}+e_{i,t},\\
+&=
+a_{t}+a_{i}	
+-\left(\gamma_{-(L-1)}+\cdots+\gamma_{-1}\right)D_{i,t-L}+\gamma_{-(L-1)}D_{i,t-(L-1)}+\cdots+\gamma_{-1}D_{i,t-1}\\
+&\hspace{1em}
++\gamma_{0}D_{i,t}+\cdots+\gamma_{G}D_{i,t+G}+\bfb'\bfx_{i,t}+e_{i,t},\\
+&=
+a_{t}+a_{i}+
+\gamma_{-(L-1)}\left(D_{i,t-(L-1)}-D_{i,t-L}\right)+\cdots+\gamma_{-1}\left(D_{i,t-1}-D_{i,t-L}\right)\\
+&\hspace{1em}
++\gamma_{0}D_{i,t}+\cdots+\gamma_{G}D_{i,t+G}
++\bfb'\bfx_{i,t}+e_{i,t},\\
+&=
+a_{t}+a_{i}+
+\sum_{s=-(L-1)}^{-1}\gamma_{s}\left(D_{i,t+s}-D_{i,t-L}\right)+\sum_{s=0}^{G}\gamma_{s}D_{i,t+s}+\bfb'\bfx_{i,t}+e_{i,t}.
+\end{aligned}
+\]
+
+
+## Checking data problems
+
+<details><summary>Click here to see data problem checks.</summary>
+Anomalous entries.
+```{r anomalous entries}
+d12L[abs(vs)> 3, ][order(StateName, time)]
+m2L[abs(vs)> 3, ][order(time, StateName)]
+```
+Data in 1956-1958 are unreliable that they use estimates. Drop from data.
+
+```{r}
+d3L <- d12L[time >= 1959, ]
+m3L <- m2L[time >= 1959, ]
+d3L[, vs := v/var(v)^(.5), by = .(StateName)]
+d3L[, vs := vs-mean(vs[1961 <= time & time <= 1965]), by = .(StateName)]
+m3L[, vs := v/var(v)^(.5), by = .(StateName)]
+m3L[, vs := vs-mean(vs[1961 <= time & time <= 1965]), by = .(StateName)]
+qsave(d3L, "../save/d3L.qs")
+qsave(m3L,"../save/m3L.qs")
+```
+Anomalous entries.
+```{r anomalous entries in trimmed data}
+d3L[abs(vs)> 3, ][order(StateName, time)]
+d3L[vs < -.5, ][order(StateName, time)]
+m3L[abs(vs)> 3, ][order(time, StateName)]
+```
+Anomalous values of below can be dropped without much costs to data availability (year before 1960).  
+
+ * `r d3L[abs(vs)> 3 & time < 1960, StateName]` from divorce rate estimation.  
+ * `r m3L[abs(vs)> 3 & time < 1960, StateName]` from marriage rate estimation.  
+
+However, it is easiest to set the starting year as 1960.
+</details>
+
+Stationarity tests.
+```{r stationarity check, warning = F}
+library(tseries)
+  d3L[, outcome := "divorce"]
+  m3L[, outcome := "marriage"]
+  dm3L <- rbind(d3L, m3L, use.names = T, fill = T)
+	  if (nrow(dm3L[is.na(v), ]) > 0) 
+    dm3L2 <- dm3L[!is.na(v), ] else 
+    dm3L2 <- dm3L
+  stt <-  dm3L2[, .(
+      kpss = kpss.test(v, null = "Trend")$p.value, 
+      adf = adf.test(v, alternative = "stationary", k = 5)$p.value), 
+      by = .(outcome, StateName)][kpss < .1 & adf < .1, ]
+  print(
+    sttW <- reshape(stt, direction = "wide", idvar = "StateName",
+      timevar = "outcome", v.names = grepout("k|adf", colnames(stt)))
+   )
+```
+Drop:  
+
+ * `r sttW[!is.na(kpss.divorce), StateName]` from divorce rate estimation.  
+ * `r sttW[!is.na(kpss.marriage), StateName]` from marriage rate estimation.  
+
+```{r}
+d3L <- qread(FPath("save", "d3L.qs"))
+m3L <- qread(FPath("save", "m3L.qs"))
+dvdrop <- sttW[!is.na(kpss.divorce), StateName]
+mrdrop <- sttW[!is.na(kpss.marriage), StateName]
+d4L <- d3L[!(StateName %in% dvdrop), ]
+m4L <- m3L[!(StateName %in% mrdrop), ]
+qsave(d4L, "../save/d4L.qs")
+qsave(m4L,"../save/m4L.qs")
+```
+
+## Marriage rates and divorce rates
+
+```{r plot marraige,  echo = F, warning = F, fig.cap = "Marriage rates (standardized with overall std and means of 1961-1965)", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+m4L <- m4L[time >= 1960, ]
+m4L[, vs := v/var(v)^(.5), by = .(StateName)]
+m4L[, vs := vs-mean(vs[1961 <= time & time <= 1965]), by = .(StateName)]
+library(ggplot2)
+ThisTheme <-   theme(
+  legend.position = "bottom", 
+  legend.direction = "horizontal",
+  legend.text=element_text(size=6),
+  legend.key.size=unit(.25, "cm"),
+  legend.title = element_blank()
+  )
+ggplot(data = m4L, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  #geom_point() +
+  geom_line() +   ThisTheme +
+  #scale_shape_manual(values = 0:10) +
+  guides(colour=guide_legend(nrow=5, byrow=F))  +
+  geom_vline(xintercept = 1975, colour = "red")
+```
+```{r plot divorce,  echo = F, warning = F, fig.cap = "Divorce rates (standardized with overall std and means of 1961-1965)", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+d4L <- d4L[time >= 1960, ]
+d4L[, vs := v/var(v)^(.5), by = .(StateName)]
+d4L[, vs := vs-mean(vs[1961 <= time & time <= 1965]), by = .(StateName)]
+ggplot(data = d4L, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  #geom_point() +
+  geom_line() +   ThisTheme +
+  #scale_shape_manual(values = 0:10) +
+  guides(colour=guide_legend(nrow=5, byrow=F))  +
+  geom_vline(xintercept = 1975, colour = "red")
+```
+
+## Event dates
+
+```{r read event date file}
+fy <- fread(FPath("source", "FirstYearCompiledBySeiro.prn"))
+d4L <- qread(FPath("save", "d4L.qs"))
+m4L <- qread(FPath("save", "m4L.qs"))
+setnames(fy, "state", "StateName")
+fy2 <- fy[, .(StateName, year, month)]
+mr <- merge(m4L, fy2, by = "StateName", all = T)
+dv <- merge(d4L, fy2, by = "StateName", all = T)
+```
+```{r plot event timing,  echo = F, warning = F, fig.cap = "Event year distribution", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+fy <- fread(FPath("source", "FirstYearCompiledBySeiro.prn"))
+ab <- fread(FPath("source", "USStateAbbreviation.prn"), header = T)
+ab[, st2 := NULL]
+fy <- merge(fy, ab, by = "state")
+setnames(fy, "state", "StateName")
+setkey(fy, year, StateName)
+fy[, vpos := 1:.N, by = year]
+fy[, vpos := vpos]
+fy[, Year := format(as.IDate(as.POSIXct(paste0(year, "-01-01"), format = "%Y-%m-%d")), "%Y")]
+ggplot(data = fy[!is.na(year)], 
+  aes(x = Year, group = StateName)) + 
+  #stat_count(fill = "white", color = "blue") +
+  geom_bar(fill = "white", color = "blue")+
+  scale_y_continuous(name = "number of counts", breaks = c(5, 10), minor_breaks = 1:10)+
+  geom_text(aes(x = Year, y = vpos-.5, label = st), color = "blue")+
+  ThisTheme + 
+  theme(
+    axis.text.x = element_text(size=10, angle = 45, hjust = 1, vjust = 1)
+  )  
+```
+
+Transform data to reflect the normalisation restriction in \eqref{eqnconst}.
+
+```{r create event time}
+for (ob in c("mr", "dv")) {
+  obj = copy(get(ob))
+  obj <- obj[!is.na(year), ]
+  obj[, year := as.numeric(as.character(year))]
+  obj[, time := as.numeric(as.character(time))]
+  obj[, trend := time - min(time)+1, by = StateName]
+  obj[, trend2 := trend^(2)]
+  obj[, trend3 := trend^(3)]
+  #### Normalization: At t-1, zero effect
+  #### year is the year of first case in each state
+  obj[, start := (year == time-1)]
+  #### et: event time
+  obj[, et := 1:.N, by = StateName]
+  obj[, et := et-et[start], by = StateName]
+  #### ptrend: pre-trend (after et=0, pre-trend is constant at ptrend[et==0])
+  obj[, ptrend := trend]
+  obj[, ptrend0 := trend[et==0], by = StateName]
+  obj[et >= 0, ptrend := ptrend0]
+  obj[, ptrend2 := trend2]
+  obj[, ptrend20 := trend2[et==0], by = StateName]
+  obj[et >= 0, ptrend2 := ptrend20]
+  obj[, ptrend3 := trend3]
+  obj[, ptrend30 := trend3[et==0], by = StateName]
+  obj[et >= 0, ptrend3 := ptrend30]
+  obj[, c("ptrend0", "ptrend20", "ptrend30") := NULL]
+  qsave(obj, paste0(pathsave, ob, ".qs"))
+  #### Normalization: mean of trend at event time < -1 is zero
+  #### For this operation, keep dummy data matrix separately as etdum.
+  etdum <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et")
+   #### change to easier-to-handle names
+  setnames(etdum, grepout("-", colnames(etdum)), 
+    gsub("-", "N", grepout("-", colnames(etdum))))
+   #### Subtract t-L (set L=10) period to impose \bar{gamma}_{s<0} = 0
+  negtime <- grepout("N", colnames(etdum))
+  etdum[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+  etdum[, etN10 := NULL]
+  #### Forcing mannually a specific order in factor levels.
+  #### lm drops the first factor level as a reference.
+  #### (can also be done using library(forcats), but not necessary)
+   #### et: -1, -22 (or -23), -21 (or -20), ..., -2, 0, 1, ...
+   #### time: 1988, 1958, 1959, ..., 1987.
+   #### StateName: Hawaii, Alabama, ..., Washington, Florida
+  obj[, et := factor(et, levels = c(-1, unique(et)[!(unique(et) %in% -1)]))]
+  obj[, time := factor(time, 
+    levels = c(1988, unique(time)[!(unique(time) %in% c(1988, 1987))], 1987))]
+  obj[, StateName := factor(StateName, 
+    levels = c("Hawaii", 
+      unique(StateName)[!(unique(StateName) %in% c("Hawaii", "Florida"))], "Florida"))]
+  assign(ob, obj)
+  assign(paste0(ob, "et"), etdum)
+}
+```
+
+# A technical note on how R's `lm` works using simulated data
+
+## Multiple factors
+
+In a regression with no intercept with mutilple factor variables, there is a rule in the choice of reference levels in `lm`.
+
+* The first factor variable in the formula uses all factor levels.  
+* Other factor variables in the formula drop each of the first level.  
+
+```{r try factor dummy variables, results = "hide"}
+set.seed(100)
+#### 10 groups (a, .., t), 60 periods
+dm1 <- factor(rep(letters[1:10], each = 60))
+trend <- rep(1:60, 10)
+dmf <- NULL
+for (gg in 1:10) {
+  dm1 <- letters[gg]
+  trend <- 1:60
+  dm2 <- factor(sample(1:4, 60, replace = T))
+  dm3 <- factor(sample(1:4, 60, replace = T))
+  dm4 <- factor(sample(1:4, 60, replace = T))
+  dm5 <- factor(sample(1:4, 60, replace = T))
+  dm6 <- factor(sample(1:4, 60, replace = T))
+  dmf0 <- data.table(y=trend+as.numeric(dm2)*9-as.numeric(dm3)*3
+    -as.numeric(dm4)*6+as.numeric(dm5)*2
+    -as.numeric(dm3)*1.5+rnorm(60, 0, 10), 
+    id=dm1, trend, dm2, dm3, dm4, dm5, dm6)
+  dmf <- rbind(dmf, dmf0)
+}
+dmf[, id := factor(id)]
+dm <- lapply(dmf[, -c(1, 3)], makeDummyFromFactor, 
+  reference = NULL, nameprefix = "")
+lapply(2:length(dm), function(i) 
+  setnames(dm[[i]], paste0("d", i, colnames(dm[[i]]))))
+```
+```{r construct dummy data, results = "hide"}
+dm <- data.table(Reduce(cbind, dm))
+summary(dm)
+```
+```{r construct dummy data 2, echo = F}
+cat(paste0("Rank is ", qr(dm)$rank, ", ", "number of columns is ", ncol(dm), 
+ ",\nneed to drop one level from each ", ncol(dm)-qr(dm)$rank, 
+ " variables\nin a matrix of ", sum(grepl("^dm", colnames(dmf))), 
+ " dummy variables.\n"))
+```
+```{r construct dummy data 3}
+dm[, y := dmf[, y]]
+lmd0 <- lm(y ~ -1 + id + dm2 + dm3 + dm4 + dm5 + dm6, data = dmf)
+DFInlm <- summary(lmd0)$df
+#### Taken from stats:::print.summary.lm
+if (nsingular <- DFInlm[3L] - DFInlm[1L]) 
+  cat("\nCoefficients: (", 
+    nsingular, " not defined because of singularities)\n")
+```
+
+## Multiple factors with interactions
+
+```{r add double interactions}
+lmd1 <- lm(y ~ -1 + id:dm2:dm3 + dm4 + dm5 + dm6, data = dmf)
+DFInlm <- summary(lmd1)$df
+#### Taken from stats:::print.summary.lm
+if (nsingular <- DFInlm[3L] - DFInlm[1L]) 
+  cat("\nCoefficients: (", 
+    nsingular, " not defined because of singularities)\n")
+lmdc <- lmd1$coefficients
+allco <- as.vector(unlist(
+  unique(dmf[, .(int=as.character(interaction(id, dm2, dm3, sep = ":")))][order(int)])))
+allco <- gsub("(.):(.):", "id\\1:dm2\\2:dm3", allco)
+#### Lacking 3 in dm3
+dmf[id == "h" & dm2 == 2, .(id, dm2, dm3)]
+```
+Singularity is caused by lack of multiple observations for a particular combination of interactions.  
+
+
+Double interactions attempted by lm  
+
+* `r names(lmdc)[names(lmdc)%in%allco]`.  
+
+All possible double interactions  
+
+* `r allco`.  
+
+Dropped from formula before regression (not attempted) in care of singularity  
+
+* `r allco[!allco %in% names(lmdc)]`.  
+
+Dropped ex post due to singularity (despite attempted)  
+
+* `r names(lmdc[is.na(lmdc)])` which is the same as `r allco[allco %in% names(lmdc[is.na(lmdc)])]`.  
+
+The above is coded as `names(lmdc[is.na(lmdc)])` which is the same as `allco[allco %in% names(lmdc[is.na(lmdc)])]`.  
+
+
+## Multiple factors with trend and interactions
+
+
+```{r add time trend group time trend}
+#### Add time trend, group wise time trend
+setkey(dmf, id, trend)
+for (aa in letters[1:20]) {
+  gt <- paste0(aa, "t")
+  dmf[, (gt) := 0L]
+  dmf[grepl(aa, id), (gt) := 1:.N]
+}
+dmf
+lmd2 <- lm(y ~ -1 + id*trend*dm2 + id*trend*dm3 + id*trend*dm4
+  + id*trend*dm5 + id*trend*dm6, data = dmf)
+DFInlm <- summary(lmd2)$df
+if (nsingular <- DFInlm[3L] - DFInlm[1L]) 
+  cat("\nCoefficients: (", 
+    nsingular, " not defined because of singularities)\n")
+```
+In a regression with no intercept, id, trend, many factors: When id, trend, all factor variables (dm2, ..., dm6; all with 5 levels) are interacted, `lm`:
+
+* Keeps all levels of `id`.  
+* Drops the first level of all factors.^[E.g., the first level (`dm21`) of `dm2`.]   
+* Drops all interaction terms with dropped factor levels.^[E.g., `id:dm21`(=`ida:dm21`, .., `idj:dm21`), `trend:dm21`, `id:dm31`, `trend:dm31`.]  
+* Drops any double interaction terms using dropped factor levels.^[Anything with `id21`, `id31`, `id41`, `id51`, e.g., `idj:dm51:trend`.]  
+* Drops the first level of interaction terms.^[E.g., `id:trend` is collinear with `id` and `trend` unless `ida:trend` is dropped. For Y=2,...5, `id:dmXY` is collinear with  `id` and `dmXY` unless `ida:dmXY` is dropped. For Y=2,...5, `id:trend:dmX` is collinear with  `id`, `trend` and `dmXY` unless `ida:trend:dmXY` is dropped.]   
+* (And keeps all other interaction terms.)  
+
+```{r singular regressors}
+lmdc <- lmd2$coefficients
+allco <- as.vector(unlist(
+  unique(dmf[, .(int=as.character(interaction(id, dm2, sep = ":")))
+  ][order(int)])))
+allco <- gsub("(.):", "id\\1:trend:dm2", allco)
+```
+Dropped for `dm2`: Anything with `dm21` and  anything with `ida:trend`.  
+
+Double interactions involving `dm2` attempted by lm  
+
+* `r names(lmdc)[names(lmdc)%in%allco]`.  
+
+All possible double interactions involving `dm2`  
+
+* `r allco`.  
+
+Dropped from formula before regression (not attempted) in care of singularity 
+
+* `r allco[!allco %in% names(lmdc)]`.  
+
+Dropped ex post due to singularity (despite attempted)  (none)  
+
+* `r names(lmdc[is.na(lmdc)])` which is the same as `r allco[allco %in% names(lmdc[is.na(lmdc)])]`.  
+
+<!--
+```{r check singularity}
+dmf[id == "b" & dm2 == "2", .(id, trend, dm2)]
+```
+-->
+
+`r grepout("dm2[2-4]", allco[!allco %in% names(lmdc)])` are the dropped terms to avoid collinearity between `id`, `trend`, `dm2Y` for Y=2, ..., 4.
+
+# Effects of normalisation choice
+
+If we use `et` variable as the first regressor, `lm` uses all levels of `et`. This overparameterises the model and gives rise to multicollinearity. In such case, we need to drop one more event time manually.
+
+
+<details><summary>Click here to see how reference period choice affects estimated results.</summary>
+
+## Baseline $\delta_{-1}=0$ vs. Miller recommend $\bar{\delta}_{<0}=0$
+
+```{r baseline reference period comparison, warning = F}
+summary(dv[, .(StateName, v, et, time, trend, trend2, trend3)])
+obj = copy(dv)
+#### In regression with no intercept,
+#### lm keeps all levels in the 1st factor variable in the formula.
+#### lm drops 1st levels in the 2nd factor variable in the formula.
+#### lm drops 1st and last levels in the 3rd factor variable in the formula.
+ #### event time, factors
+#### "v" is divorce/marriage rate (not standardised)
+r10a <- lm(v ~ -1+et+StateName+time, data = obj)
+r10b <- lm(v ~ -1+StateName+et+time, data = obj)
+r10c <- lm(v ~ -1+StateName+time+et, data = obj)
+obj[, time := factor(time, 
+    levels = c(1988, levels(time)[!(levels(time) %in% c(1988, 1959:1961))], 1961:1959))]
+ #### event time, factors, trends
+r22a <- lm(v ~ -1+et+trend+trend2+trend3+StateName+time, data = obj)
+r22b <- lm(v ~ -1+trend+trend2+trend3+StateName+et+time, data = obj)
+r22c <- lm(v ~ -1+trend+trend2+trend3+StateName+time+et, data = obj)
+ #### Create a dummy matrix of factor variable "et"
+etdumpre <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et")
+setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+  gsub("-", "N", grepout("-", colnames(etdumpre))))
+ #### Subtract t-L, L=10 period to impose \bar{gamma}_{s<0} = 0
+negtime <- grepout("N", colnames(etdumpre))
+etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+etdumpre[, etN10 := NULL]
+ #### formula terms for et dummy matrix
+ettermspre <- paste(colnames(etdumpre), collapse = "+")
+####obj[, StateName := factor(StateName, 
+####  exclude=c('Hawaii', 'Florida', 'District Of Columbia'))]
+obj3 <- data.table(obj, etdumpre)
+ #### factors, trends, explicit event time dummies
+form1 <- paste0("v ~ -1+StateName+time+", ettermspre)
+form2 <- paste0("v ~ -1+trend+StateName+time+", ettermspre)
+form3 <- paste0("v ~ -1+trend+trend2+trend3+StateName+time+", ettermspre)
+r31 <- lm(as.formula(form1), data = obj3)
+r32 <- lm(as.formula(form2), data = obj3)
+r33 <- lm(as.formula(form3), data = obj3)
+```
+Compare r10a, r10b, r10c, r22a, r22b, r22c, r31, r32, r33.
+```{r ci baseline normalization, warning = F}
+#### explanation of forms
+form0 <- c(
+  #### r10
+  "et+StateName+time", "StateName+et+time", "StateName+time+et",
+  #### r22
+  "et+trend+trend2+trend3+StateName+time",
+  "trend+trend2+trend3+StateName+et+time",
+  "trend+trend2+trend3+StateName+time+et",
+  #### r3X
+  "StateName+time+eterms",
+  "trend+StateName+time+eterms",
+  "trend+trend2+trend3+StateName+time+eterms")
+#### explanation of term order
+forder <- c(paste(rep(c("TWFE", "TWFE trend"), each = 3), 
+  c("et pos 1", "et pos 2", "et pos last")), 
+  "TWFE premean = 0", "TWFE trend premean = 0",
+  "TWFE trend3 premean = 0")
+#### explanation of normalization choice
+ #### TWFE and TWFE trend use default normalization of factor level order
+ #### r10a: all levels of et are used, r10b: first level of et is dropped, etc. 
+ #### r31-r33: etN10 is dropped, r32-r33: time is dropped in favor of trend
+normalization <- c(rep(c("TWFE", "TWFE trend"), each = 3), 
+  rep("TWFE trend premean = 0", 3))
+nums <- c(rep(c(10, 22), each =3), 31:33)
+Ci <- NULL
+for (i in 1:9) {
+  if (i < 7) 
+    rr <- get(paste0("r", nums[i], rep(letters[1:3], 2)[i])) else
+    rr <- get(c("r31", "r32", "r33")[i-6])
+  clus <- data.table(rr$model)[, StateName]
+  rrc <- clx(rr, cluster = clus, returnV = T)
+  clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+  clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
+  clxci[, FormulaOrder := forder[i]]
+  clxci[, normalisation := normalization[i]]
+  Ci <- rbind(Ci, clxci)
+}
+Ci[, period := gsub("et", "", Coef)]
+Ci <- Ci[grepl("^.?\\d", period), ]
+Ci[, period := gsub("N", "-", period)]
+Ci[, period := as.numeric(period)]
+setcolorder(Ci,
+ c("Coef", "Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5 %", "97.5 %", "period"))
+setnames(Ci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+numcols <- c("beta", "CI_L", "CI_U", "period")
+Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
+Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+Ci[, FormulaOrder := factor(FormulaOrder, levels = forder)]
+```
+**et pos X** = `et` is positioned at X. X = 1 means `et` comes first in the formula. X = 2 means `et` comes after trend and StateName. X = last means `et` comes after trend, StateName, and time. 
+
+```{r plot baseline premean ci, echo = F, warning = F, fig.cap = "Impacts on divorce rates: Different normalization", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[!grepl("trend", FormulaOrder), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .1, position = position_dodge(width = .7)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.5, "cm")
+  ) +
+  ####facet_wrap(~ normalisation, scales = "free_y")+
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous(limits = c(-5, 10)) +
+  scale_x_continuous(limits = c(-24.5, 10.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+Compare `r paste0(c("r10a", "r10b", "r10c"), "(", forder[1:3], ")")`.
+
+ * r10a vs r10b, r10c: One sees that keeping all levels adds a value equivalent to the intercept to all estimates. This gives a problem when we force a normalisation $\gamma_{-1}=0$ as the estimates jump around $t=-1$. Another noticeable characteristic is that standard errors decrease as event time progresses.  
+
+## With trends: $\delta_{-1}=0$ vs. $\bar{\delta}_{<0}=0$
+
+```{r plot trend premean ci, echo = F, warning = F, fig.cap = "Impacts on divorce rates: Different normalization with trends", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("trend", FormulaOrder), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .1, position = position_dodge(width = .7)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.5, "cm")
+  ) +
+  ####facet_wrap(~ normalisation, scales = "free_y")+
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous(limits = c(-5, 10)) +
+  scale_x_continuous(limits = c(-24.5, 10.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+
+Compare `r paste0(c("r22a", "r22b", "r22c", "r31", "r32", "r33"), "(", forder[-(1:3)], ")")`.
+
+  
+ * r22a vs. r22b, r22c: When et assumes the role of intercept (r22a), it has to counter the rapid decline caused by the trend, thence an increasing pattern of estimated values as time passes. This must be avoided. Both r22b and r22c drop et=-1 and et=15. All estimates of r22b and r22c are identical.  
+ * r31: Only N10 is dropped. r32: N10 and time are dropped.  
+
+If we exclude r10a and r22a, estimates are much similar.
+
+```{r plot compare ci wo r10a r22a,  echo = F, warning = F, fig.cap = "Impacts on divorce rates: Different normalization with event time factor defined as deviation from overall mean", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[!grepl("TWFE.*1", FormulaOrder), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .1, position = position_jitterdodge(dodge = .75)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.5, "cm")
+  ) +
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous() +
+  scale_x_continuous(limits = c(-24.5, 10.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+* Differences in point estimates are difference in normalization choice, $\delta_{-1}=0$ or $\bar{\delta}_{\tau<0}=0$.  
+* Such seemingly an inoccuous choice has big impacts on standard errors. Premean = 0 seems to enjoy tighter CIs. This was also pointed out in Miller saying basing on one point involves larger sampling errors, but I am not sure if such reasoning is convincing.  
+
+```{r plot compare ci only r3X,  echo = F, warning = F, fig.cap = "Impacts on divorce rates: Premean = 0 normalization", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("pre", FormulaOrder), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .1, position = position_jitterdodge(dodge = .75)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.5, "cm")
+  ) +
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous() +
+  scale_x_continuous(limits = c(-24.5, 10.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+What if we only use 1961- and etN19-et15?  
+
+```{r use 1961 onwards, warning = F}
+obj = copy(dv)
+r10a <- lm(v ~ -1+et+StateName+time, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+r10b <- lm(v ~ -1+StateName+et+time, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+r10c <- lm(v ~ -1+StateName+time+et, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+r22a <- lm(v ~ -1+et+trend+trend2+trend3+StateName+time, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+r22b <- lm(v ~ -1+trend+trend2+trend3+StateName+et+time, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+r22c <- lm(v ~ -1+trend+trend2+trend3+StateName+time+et, 
+  data = obj[as.numeric(as.character(time)) > 1960, ])
+obj[, time := factor(time, 
+    levels = c(1988, levels(time)[!(levels(time) %in% c(1988, 1959:1961))], 1961:1959))]
+etdumpre <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et", reference = NULL)
+setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+  gsub("-", "N", grepout("-", colnames(etdumpre))))
+negtime <- grepout("N", colnames(etdumpre))
+etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+etdumpre[, etN10 := NULL]
+ettermspre <- paste(colnames(etdumpre), collapse = "+")
+obj3 <- data.table(obj, etdumpre)
+ettermspre2 <- gsub("etN2..*etN20\\+", "", ettermspre)
+form1 <- paste0("v ~ -1+StateName+time+", ettermspre2)
+form2 <- paste0("v ~ -1+trend+StateName+time+", ettermspre2)
+form3 <- paste0("v ~ -1+trend+trend2+trend3+StateName+time+", ettermspre2)
+r31 <- lm(as.formula(form1), data = obj3[as.numeric(as.character(time)) > 1960, ])
+r32 <- lm(as.formula(form2), data = obj3[as.numeric(as.character(time)) > 1960, ])
+r33 <- lm(as.formula(form3), data = obj3[as.numeric(as.character(time)) > 1960, ])
+Ci <- NULL
+normalization <- c(rep(c("TWFE", "TWFE trend"), each = 3), 
+  rep("TWFE trend premean = 0", 3))
+nums <- c(rep(c(10, 22), each =3), 31:33)
+Ci <- NULL
+for (i in 1:9) {
+  if (i < 7) 
+    rr <- get(paste0("r", nums[i], rep(letters[1:3], 2)[i])) else
+    rr <- get(c("r31", "r32", "r33")[i-6])
+  clus <- data.table(rr$model)[, StateName]
+  rrc <- clx(rr, cluster = clus, returnV = T)
+  clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+  if (i < 7) clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
+  clxci[, FormulaOrder := forder[i]]
+  clxci[, normalisation := normalization[i]]
+  Ci <- rbind(Ci, clxci)
+}
+Ci[, period := gsub("et", "", Coef)]
+Ci <- Ci[grepl("^.?\\d|tre", period), ]
+Ci[, period := gsub("N", "-", period)]
+Ci[, period := as.numeric(period)]
+setcolorder(Ci,
+ c("Coef", "Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5 %", "97.5 %", "period"))
+setnames(Ci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+numcols <- c("beta", "CI_L", "CI_U", "period")
+Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
+Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+Ci[, FormulaOrder := factor(FormulaOrder, levels = forder)]
+Ci[grepl("pre", FormulaOrder) & abs(period) < 2, 
+  .(Coef, beta, period, FormulaOrder)][order(Coef, FormulaOrder)]
+Ci[grepl("pre", FormulaOrder) & grepl("trend", Coef), 
+  c("Coef", "beta", "Pr(>|t|)", "FormulaOrder")][order(Coef, FormulaOrder)]
+```
+```{r plot compare ci only r3X post 1960,  echo = F, warning = F, fig.cap = "Impacts on divorce rates: Premean = 0 normalization, 1961-", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("pre", FormulaOrder) , ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .1, position = position_jitterdodge(dodge = .75)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.5, "cm")
+  ) +
+  scale_fill_viridis_d(end = .8)+
+  scale_colour_viridis_d(end = .8)+
+  scale_y_continuous(limits = c(-1.5, 3)) +
+  scale_x_continuous(limits = c(-19.5, 14.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+* Estimates are exactly the same for all models.   
+* Trend and time FEs have a linear relationship. This makes estimates on other variables exactly the same.  
+* When time FEs and trend are put together, we can define a new set of time FEs $\tilde{\tau}_{1} = \tau_{1} - trend$, $\tilde{\tau}_{2} = \tau_{2} - 2*trend$, ... where $\tau_{t}$ is time $t$ FE in the regression without a trending term. So when time FEs and trend are used as covariates, and one of $\tau_{t}$ must be dropped to avoid collinearity with $trend$ and $\tau_{t}$.  
+
+In essence, for the divorce and marriage data sets, the only variations in estimation specification that are worths examining are:
+
+* TWFE with $\delta_{-1}=0$, and,  
+* TWFE with $\bar{\delta}_{\tau<0} = 0$.  
+* In both, one of `et` factor levels is dropped. 
+
+```{r plot compare ci TWFE TWFE pre post 1960,  echo = F, warning = F, fig.cap = "Impacts on divorce rates: t=-1 and premean normalization, 1961-1987", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("TWFE et pos 2|E pre", FormulaOrder) , ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .2, position = position_jitterdodge(dodge = .5)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.75, "cm")
+  ) +
+  scale_fill_viridis_d(end = .8)+
+  scale_colour_viridis_d(end = .8)+
+  scale_y_continuous(limits = c(-2, 2.75)) +
+  scale_x_continuous(limits = c(-19.5, 14.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+* It is essential to note the increasing trend in divorce rates when we try to understand the differences in model estimates.  
+* Restriction $\bar{\delta}_{\tau<0}=0$ pulls down pre-period estimates. When combined with the increasing trend, it gives rise to elevated post-period estimates.  
+* Using only time FEs (TWFE) stabilizes point estimates around zero, but at the cost of increasing SEs or a less precise fit.  
+* With smaller SEs, one would choose the model with $\bar{\delta}_{\tau<0}=0$ restriction.  
+* The last point may be more emphasized once we see that $\delta_{-1}=0$ and $\bar{\delta}_{<0}=0$ are a transformation of one another: If we tilt $\delta_{-1}=0$ (purple line) counter clockwise at around the point where $\bar{\delta}_{<0}=0$ (green) crosses zero, we will have the same plots. This implies smaller SEs can be a free lunch.  
+* There seems to be a pattern in SEs: They are smallest when the sign of estimates change (when the line cross zero).  
+   * $\delta_{-1}=0$ has small $p$ values right after the impact but not later.   
+   * Later impacts (mechanically?) have larger $p$ values.  
+
+
+
+## State specific trends: $\delta_{-1}=0$ vs. $\bar{\delta}_{<0}=0$
+
+```{r state spec trends, warning = F}
+Ci <- NULL
+for (ob in c("mr", "dv")) {
+  obj = copy(get(ob))
+  obj[, et := factor(et)]
+  #### r22: state individual trends, time, et with \delta_{-1}=0.
+  r22 <- lm(v ~ -1+trend*StateName+time+et, 
+    data = obj[as.numeric(as.character(time)) > 1960, ])
+  obj[, time := factor(time, 
+      levels = c(1988, levels(time)[!(levels(time) %in% c(1988, 1959:1961))], 1961:1959))]
+  etdumpre <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et", reference = NULL)
+  setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+    gsub("-", "N", grepout("-", colnames(etdumpre))))
+  #### negtime: negative et periods. This is used to impose 
+  #### Preperiod = 0 restriction on the data matrix. 
+  negtime <- grepout("N", colnames(etdumpre))
+  etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+  etdumpre[, etN10 := NULL]
+  obj3 <- data.table(obj, etdumpre)
+  #### ettermspre2: et terms etN19+etN18+...+et10 
+  #### (with corresponding matrix etdumpre has Preperiod = 0 imposed)
+  ettermspre <- paste(colnames(etdumpre), collapse = "+")
+  ettermspre2 <- gsub("etN2..*etN20\\+", "", ettermspre)
+  form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre2)
+  #### r32: state individual trends, time, and et with preperiod = 0
+  r32 <- lm(as.formula(form2), data = obj3[as.numeric(as.character(time)) > 1960, ])
+  normalization <- c(rep(c("TWFE", "TWFE trend"), each = 3), 
+    rep("TWFE trend premean = 0", 3))
+  nums <- c(rep(c(10, 22), each =3), 31:33)
+  #### Below loop works on r10a, ..., r33, but we extract only r22 and r32
+  #### which are estimated in this chunk.
+  for (i in 1:9) {
+    if (i < 7) 
+      rr <- get(paste0("r", nums[i], rep(letters[1:3], 2)[i])) else
+      rr <- get(c("r31", "r32", "r33")[i-6])
+    clus <- data.table(rr$model)[, StateName]
+    rrc <- clx(rr, cluster = clus, returnV = T)
+    clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+    if (i < 7) clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
+    clxci[, FormulaOrder := forder[i]]
+    clxci[, normalisation := normalization[i]]
+    clxci[, spec := paste0("r", 
+      c("10a", "10b", "10c", "22a", "22", "23c", "31", "32", "33")[i])]
+    clxci[, obj := ob]
+    clxci[, period := gsub("et", "", Coef)]
+    clxci[, period := gsub("N", "-", period)]
+    clxci[, period := as.numeric(period)]
+    setnames(clxci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+    numcols <- c("beta", "CI_L", "CI_U", "period")
+    clxci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+    strcols <- colnames(clxci)[!(colnames(clxci) %in% numcols)]
+    clxci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+    clxci[, FormulaOrder := factor(FormulaOrder, levels = forder)]
+    clxci[grepl("22$|32", spec), FormulaOrder := gsub("trend", "itrend", FormulaOrder)]
+    Ci <- rbind(Ci, clxci)
+  }
+}
+setcolorder(Ci,
+ c("Coef", "beta", "Std. Error", "t value", "Pr(>|t|)", "CI_L", "CI_U", "period"))
+setnames(Ci, "Pr(>|t|)", "pval")
+Ci[grepl("itrend pre", FormulaOrder) & grepl("trend:", Coef) & grepl("dv", obj), 
+  .(Coef=gsub(".StateName", "\\*", Coef), beta=round(beta, 4), 
+  "p(%)"=round(as.numeric(as.character(pval))*100, 2), FormulaOrder)][
+    order(Coef, FormulaOrder)]
+Ci[grepl("itrend pre", FormulaOrder) & grepl("trend:", Coef) & grepl("mr", obj), 
+  .(Coef=gsub(".StateName", "\\*", Coef), beta=round(beta, 4), 
+  "p(%)"=round(as.numeric(as.character(pval))*100, 2), FormulaOrder)][
+    order(Coef, FormulaOrder)]
+setnames(Ci, "pval", "Pr(>|t|)")
+```
+Estimates on state specific trends are large in magnitude and have very small $p$ values. These large-in-magnitude and heterogenous state specific trends affect the estimates on `et` in an unpredicted way. Because their magnitude is large, in the current case, `et` estimates diverge (to negative infinity?).  
+
+* Estimates under premean = 0 with state specific trends are not sensible.  
+* Why are only models with $\bar{\delta}_{\tau<0}=0$ affected?  
+
+Miller (2023, p.220) also notes that trends may embed quadratic trends in `et`: 
+
+> _Finally, if we are working with a timing-based data structure, controlling for trends has potential to create surprising and severe problems. Adding linear trend controls (and the required additional parameter restriction) can induce quadratic trends into our estimated event study coefficients. This arises from a subtle way in which the event dummies are collinear with the other variables in the model (as illustrated in online Appendix F.2)_  
+
+
+```{r plot indiv trend,  echo = F, warning = F, fig.cap = "Impacts on divorce and marriage rates: State specific trends", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("22$|32", spec), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .2, position = position_jitterdodge(dodge = .5)) +
+  geom_line() + ThisTheme +
+  facet_wrap( ~ obj) +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.75, "cm")
+  ) +
+  scale_fill_viridis_d(end = .8)+
+  scale_colour_viridis_d(end = .8)+
+  scale_y_continuous(limits = c(-20, 5)) +
+  scale_x_continuous(limits = c(-19.5, 14.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+
+To dig into what is going on, we will:  
+
+* Restrict et to be between -15 and 10 (or 11) because there are fewer observations outside this window (see the below table).  
+* Keep only a few states and see.  
+
+```{r state trends et N15 10 small sample, eval = T, warning = F}
+options(width = 120)
+Ci <- NULL
+for (ob in c("mr", "dv")) {
+  obj1 = copy(get(ob))
+  #### Restrict: -15 <= et <= 10
+  obj1[, time := factor(time, 
+      levels = c(1988, levels(time)[!(levels(time) %in% c(1988, 1959:1961))], 
+        1961:1959))]
+  obj1[, et := as.numeric(as.character(et))]
+  #### et < -15 | et > 10 ==> -1, so it does not directly 
+  #### affect delta (et estimates) once we impose \delta_{-1}=0.
+  obj1[et < -15 | et > 10, et := -1L]
+  obj1[, et := factor(et)]
+  obj1[, et := factor(et, levels = c(-1, levels(et)[!(levels(et) %in% c(-1))]))]
+  obj1 <- obj1[grepl("^[A-Z]", StateName) & as.numeric(as.character(time)) > 1960, ]
+  #### r10bb: TWFE with et window restriction
+  r10bb <- lm(v ~ -1+StateName+time+et, 
+    data = obj1[as.numeric(as.character(time)) > 1960, ])
+  #### r22: TWFE with indiv trends and et window restriction, small samples
+  r22s <- lm(v ~ -1+trend*StateName+time+et, data = obj1)
+  #### Explicitly drop etN16, etN17, ..., et11, et12, and allow etN1 to be kept
+  etdumpre <- makeDummyFromFactor(factor(obj1[, et]), 
+    nameprefix = "et", reference = NULL)
+  setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+    gsub("-", "N", grepout("-", colnames(etdumpre))))
+  #### Drop et < -15 | et > 10 terms
+  etdumpre[, grepout("N2.|N1[6-9]|et1[1-9]", colnames(etdumpre)) := NULL]
+  ettermspre <- paste(colnames(etdumpre), collapse = "+")
+  #### Explicitly drop et < -15 | et > 10 terms and drop etN1
+  etdumpre[, etN1 := NULL]
+  ettermspre <- paste(colnames(etdumpre), collapse = "+")
+  obj3 <- data.table(obj1, etdumpre)
+  form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre)
+  #### r22ee: TWFE with indiv trends, et window restriction, dropping N1
+  #### TWFE itrend no N1 N15P10
+  r22ees <- lm(as.formula(form2), data = obj3)
+  #### Preperiod = 0 restriction on the data matrix. 
+  etdumpre <- makeDummyFromFactor(factor(obj1[, et]), 
+    nameprefix = "et", reference = NULL)
+  setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+    gsub("-", "N", grepout("-", colnames(etdumpre))))
+  etdumpre[, grepout("N2.|N1[6-9]|et1[1-9]", colnames(etdumpre)) := NULL]
+  negtime <- grepout("N", colnames(etdumpre))
+  etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+  etdumpre[, etN10 := NULL]
+  #### Drop etN2X - etN20 from formula. 
+  #### This is already dropped so no change is made here. 
+  ettermspre <- paste(colnames(etdumpre), collapse = "+")
+  ettermspre2 <- gsub("etN2..*etN20\\+", "", ettermspre)
+  obj3 <- data.table(obj1, etdumpre)
+  form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre2)
+  #### r32s: state individual trends, time, et with preperiod = 0
+  r32s <- lm(as.formula(form2), data = obj3)
+  #### Add "TWFE itrend N15P10" to forder, paste N15P10 to r22
+  regob <- paste0("r", c("10a", "10bb", "10c", 
+      "22a", "22", "22c", "31", "32s", "33", #### 32s is substituted to 32 
+       "22ees")) #### this is added
+  forder2 <- c(forder, "TWFE itrend N15P10", "TWFE itrend no N1 N15P10")
+  forder2 <- gsub("i?trend et pos 2", "itrend et pos 2 N15P10", forder2)
+  forder2 <- gsub("E et pos 2", "E et pos 2 N15P10", forder2)
+  forder2 <- gsub(" trend premean = 0", " itrend premean = 0 N15P10", forder2)
+  Ci0 <- NULL
+  for (i in 1:length(regob)) {
+    rr <- get(regob[i])
+    clus <- data.table(rr$model)[, StateName]
+    rrc <- clx(rr, cluster = clus, returnV = T)
+    clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+    if (i < 7) clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
+    clxci[, FormulaOrder := forder2[i]]
+    clxci[, spec := regob[i]]
+    Ci0 <- rbind(Ci0, clxci)
+  }
+  Ci0[, period := gsub("et", "", Coef)]
+  Ci0 <- Ci0[grepl("^.?\\d|tre", period), ]
+  Ci0[, period := gsub("N", "-", period)]
+  Ci0[, period := as.numeric(period)]
+  Ci0[, outcome := ob]
+  Ci0[, FormulaOrder := factor(FormulaOrder, levels = forder2)]
+  setnames(Ci0, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+  Ci <- rbindlist(list(Ci, Ci0), fill = T)
+  setcolorder(Ci, c("Coef", "beta", "Std. Error", "t value", 
+    "Pr(>|t|)", "CI_L", "CI_U", "period"))
+  numcols <- c("beta", "CI_L", "CI_U", "period")
+  Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+  strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
+  Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+}
+Ci[grepl("s$", spec) & (abs(period) <= 3 | grepl("trend$", Coef)), 
+  c("outcome", "Coef", "beta", "Pr(>|t|)", "spec", "FormulaOrder")]
+```
+
+```{r plot indiv trend N15 10 small sample, echo = F, warning = F, fig.cap = "Impacts on divorce and marriage rates: State specific trends, et window N15-10, small sample", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("s$", spec), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .2, position = position_jitterdodge(dodge = .5)) +
+  geom_line() + ThisTheme +
+  facet_wrap( ~ outcome) +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.75, "cm")
+  ) +
+  scale_fill_viridis_d(end = .8)+
+  scale_colour_viridis_d(end = .8)+
+  scale_y_continuous() +
+  scale_x_continuous(limits = c(-19.5, 14.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+* Under this window restriction, estimates under $\bar{\delta}_{s<0}=0$ restriction are not diverging.  
+* Again, in the neighbourhood of when $\delta_{t}=0$ is imposed (-10 and -1), SEs are smaller.  
+
+
+* Why are $\bar{R}^{2}$'s so high?  
+
+
+```{r state trends et N15 10, warning = F}
+#### Restrict: -15 <= et <= 10
+obj = copy(dv)
+table(obj[as.numeric(as.character(time)) > 1960, et])
+obj1 = copy(dv)
+obj1[, time := factor(time, 
+    levels = c(1988, levels(time)[!(levels(time) %in% c(1988, 1959:1961))], 1961:1959))]
+obj1[, et := as.numeric(as.character(et))]
+#### et < -15 | et > 10 ==> -1, so it does not directly 
+#### affect delta (et estimates) once we impose \delta_{-1}=0.
+obj1[et < -15 | et > 10, et := -1L]
+obj1[, et := factor(et)]
+obj1[, et := factor(et, levels = c(-1, levels(et)[!(levels(et) %in% c(-1))]))]
+#### r10bb: TWFE with et window restriction
+r10bb <- lm(v ~ -1+StateName+time+et, 
+  data = obj1[as.numeric(as.character(time)) > 1960, ])
+#### r22: TWFE with indiv trends and et window restriction
+r22 <- lm(v ~ -1+trend*StateName+time+et, 
+  data = obj1[as.numeric(as.character(time)) > 1960, ])
+#### Explicitly drop etN16, etN17, ..., et11, et12, and allow etN1 to be kept
+etdumpre <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et", reference = NULL)
+setnames(etdumpre, grepout("-", colnames(etdumpre)), 
+  gsub("-", "N", grepout("-", colnames(etdumpre))))
+#### Drop et < -15 | et > 10 terms
+etdumpre[, grepout("N2.|N1[6-9]|et1[1-9]", colnames(etdumpre)) := NULL]
+ettermspre <- paste(colnames(etdumpre), collapse = "+")
+obj3 <- data.table(obj1, etdumpre)
+form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre)
+#### r22e: TWFE with indiv trends, et window restriction, keeping N1
+#### TWFE itrend N15P10
+r22e <- lm(as.formula(form2), data = obj3[as.numeric(as.character(time)) > 1960, ])
+#### Explicitly drop et < -15 | et > 10 terms and drop etN1
+etdumpre[, etN1 := NULL]
+ettermspre <- paste(colnames(etdumpre), collapse = "+")
+obj3 <- data.table(obj1, etdumpre)
+form2 <- paste0("v ~ -1+trend*StateName+time+", ettermspre)
+#### r22ee: TWFE with indiv trends, et window restriction, dropping N1
+#### TWFE itrend no N1 N15P10
+r22ee <- lm(as.formula(form2), data = obj3[as.numeric(as.character(time)) > 1960, ])
+#### Add "TWFE itrend N15P10" to forder, paste N15P10 to r22
+forder2 <- c(forder, "TWFE itrend N15P10", "TWFE itrend no N1 N15P10")
+forder2 <- gsub("i?trend et pos 2", "itrend et pos 2 N15P10", forder2)
+forder2 <- gsub("E et pos 2", "E et pos 2 N15P10", forder2)
+regob <- paste0("r", c("10a", "10bb", "10c", 
+    "22a", "22", "22c", "31", "32", "33", "22e", "22ee"))
+Ci <- NULL
+for (i in 1:length(regob)) {
+  rr <- get(regob[i])
+  clus <- data.table(rr$model)[, StateName]
+  rrc <- clx(rr, cluster = clus, returnV = T)
+  clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+  if (i < 7) clxci <- rbind(clxci, t(c(-1, 0, rep(NA, 5))), use.names = F)
+  clxci[, FormulaOrder := forder2[i]]
+  clxci[, spec := regob[i]]
+  Ci <- rbind(Ci, clxci)
+}
+Ci[, period := gsub("et", "", Coef)]
+Ci <- Ci[grepl("^.?\\d|tre", period), ]
+Ci[, period := gsub("N", "-", period)]
+Ci[, period := as.numeric(period)]
+setcolorder(Ci,
+ c("Coef", "Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5 %", "97.5 %", "period"))
+setnames(Ci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+numcols <- c("beta", "CI_L", "CI_U", "period")
+Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
+Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+Ci[, FormulaOrder := factor(FormulaOrder, levels = forder2)]
+Ci[grepl("10bb|22$|22e|32", spec) & (abs(period) < 2 | grepl("trend$", Coef)), 
+  c("Coef", "beta", "Pr(>|t|)", "spec", "FormulaOrder")]
+```
+
+
+
+```{r plot state trends,  echo = F, warning = F, fig.cap = "Impacts on divorce rates (event time in -15 to 10, observation 1961 - 1987): With or without state specific trends, keeping or dropping et=-1", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = Ci[grepl("10bb|22$|22e", spec), ], 
+  aes(x = period, y = beta, group = FormulaOrder, 
+    color = FormulaOrder, shape = FormulaOrder, fill = FormulaOrder)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .2, position = position_jitterdodge(dodge = .5)) +
+  geom_line() + ThisTheme +
+  theme(
+  legend.text=element_text(size=8),
+  legend.key.size=unit(.75, "cm")
+  ) +
+  scale_fill_viridis_d(end = .8)+
+  scale_colour_viridis_d(end = .8)+
+  scale_y_continuous(limits = c(-1, 2)) +
+  scale_x_continuous(limits = c(-15.5, 10.5)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+* TWFE estimates with state specific trends when we drop et values outside [-15, 10] window may not look similar, but it is all due to the choice of normalisation.  
+* Dropping et = -1 (`r grepout("itrend et.*P", forder2)` estimated using a factor  and `r grepout("itrend No N", forder2)` estimated with an explicit dummy matrix) give identical estimates. 
+* With a window restriction, when not dropping et = -1 (`r grepout("itrend N15", forder2)`), one gets estimates that are pushed upwards as in `r grepout("itrend N15", forder2)`. This is because we are allowing the nonzero estimate at et = -1 ($\delta_{-1}\neq 0$) which shifts the all other $\delta_{t\neq -1}$ estimates to the direction of $\delta_{-1}$. Note the relative size of $\delta_{t\neq -1}$ and $\delta_{-1}$ are similar to other normalization choices.  
+* With a window restriction and not dropping et = -1 (`r grepout("itrend N15", forder2)`) has estimates similar with other normalization choices towards the edge of the window, because these are the furtherst from the difference or et = -1. This effectively gives rise to an inverse-U shape (could have been U shape if the deviation is negative).  
+* Restricting et = -1 to be zero reduces SEs.   
+* Estimates with state specific trends have smaller SEs.  
+* All model estimates are not trending.  
+* In the base TWFE estimates, States have individual intercepts, year 1987 is dropped from factor `time`, et=-1 is dropped and its estimate is assigned the value of zero in `et`. In TWFE with individual trends, the additional restrictions are: trend&ast;Hawaii is dropped.  In TWFE with individual trends and restricting et = -1 to be zero, additional retstriction is et = -1.  
+
+</details>
+
+
+So the general idea for normalisation is:
+
+* Manually drop -1 from `et` if normalization $\gamma_{-1}=0$ is used.  
+* Manually drop $-L$  from `et` if normalization $\bar{\gamma}_{s<0}=0$ is used and set $\textrm{et}_{t<0}=\textrm{et}_{t<0}-\textrm{et}_{-L}$.  
+* Manually drop 2 periods (start and last periods of data) from `time` to incorporate time FE and a linear trend. One for a reference of own dummy variable, another to avoid collinearity with trend.  
+* One must use an intercept term (or equivalently, use all values of other indicator variable, say, State) to force `et` to be relative to overall mean. Otherwise, it will force $\hat{\delta}_{\tau}$ to be away from zero when the outcome is trending.  
+* Manually drop 1 state ("Hawaii") from `StateName` to incorporate state FE with a restriction $\bar{a}=0$, after setting $a_{i}=a_{i}-a_{Hawaii}$.  
+* Manually drop one state specific trend (trend&ast;Hawaii) if state specific trends are used.  
+* Using state specific trends and $\bar{\gamma}_{s<0}=0$ makes estimates diverge to $-\infty$ or $\infty$ for reasons I do not understand. Due to unknown reasons, however, setting the event time window narrower as [-15, 10] makes estimates non-divergent.  
+
+## Veryfying the code with simulated data
+
+### Using Bacon data
+
+```{r generate data}
+#### https://lost-stats.github.io/Model_Estimation/Research_Design/event_study.html#r
+  #### Load and prepare data
+####dat = fread("https://raw.githubusercontent.com/LOST-STATS/
+#####LOST-STATS.github.io/master/Model_Estimation/Data/Event_Study_DiD/
+##### bacon_example.csv") 
+dat <- fread(FPath("source", "bacon_example.csv"))
+  #### Let's create a more user-friendly indicator of which states received treatment
+dat[, treat := ifelse(is.na(`_nfd`), 0, 1)]
+dat[, time_to_treat := ifelse(treat==1, year - `_nfd`, 0)]
+```
+`fixest` has `i` function that deals with interaction terms. By default, reference is the first level. Here, -1 is chosen explicitly.
+```{r bacon fixest}
+library(fixest)
+twfe1 = feols(asmrs ~ i(time_to_treat, treat, ref = -1) | 
+     #### Our key interaction: time × treatment status
+     stfips + year,      #### FEs
+     cluster = ~stfips, #### Clustered SEs
+     data = dat)
+```
+```{r bacon dummy matrix}
+ttdum <- makeDummyFromFactor(factor(dat[, time_to_treat]), 
+  nameprefix = "tt", reference = NULL)
+setnames(ttdum, colnames(ttdum), gsub("-", "N", colnames(ttdum)))
+ttterms <- paste(colnames(ttdum), collapse = "+")
+ttterms2 <- gsub("\\+ttN1\\+", "+", ttterms) # ttN21+...+ttN2+tt0+tt1+...
+ttterms3 <- gsub("ttN21\\+", "", ttterms) # ttN20+...+ttN1+tt0+tt1+...
+dat[, time := factor(year)]
+dat[, id := factor(stfips)]
+dt <- data.table(dat, ttdum)
+#### 2: no intercept+ttterms2, et=-1 is dropped
+#### 3: with intercept+ttterms2, et=-1, id=1 are dropped
+#### 4: with intercept+ttterms3, et=-21, id=1 are dropped
+twfe2 <- lm(as.formula(paste0("asmrs ~ -1+id+time+", ttterms2)), data = dt)
+twfe3 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms2)), data = dt)
+twfe4 <- lm(as.formula(paste0("asmrs ~ id+time+", ttterms3)), data = dt)
+tc1 <- twfe1$coeff
+names(tc1) <- gsub("ti.*::", "tt", names(tc1))
+names(tc1) <- gsub(":treat", "", names(tc1))
+names(tc1) <- gsub("-", "N", names(tc1))
+for (i in 1:4) {
+  if (i > 1) {
+    tw <- get(paste0("twfe", i))
+    tc <- tw$coeff
+  } else tc <- tc1
+  tc <- tc[grep("tt", names(tc))]
+  tc <- data.table(spec = c("fixest", "no int, -1", "int, -1, id=1", "int, -21, id=1")[i], 
+    coef = names(tc), val = tc)
+  assign(paste0("tcf", i), tc)
+}
+tcf <- rbindlist(list(tcf1, tcf2, tcf3, tcf4))
+tcf[, et := gsub("tt", "", coef)]
+tcf[, et := gsub("N", "-", et)]
+tcf[, et := as.numeric(et)]
+tcf[et == -21, ]
+tcf[et == -1, ]
+```
+```{r CIs fixest and others}
+library(clubSandwich)
+ci1 <- data.table(cbind(names(twfe1$coeff), twfe1$coeff, stats::confint(twfe1)))
+ci2 <- lapply(list(twfe2, twfe3, twfe4), function(x) 
+  clubSandwich::conf_int(x, vcov = "CR2", level = 0.95, 
+  test = "Satterthwaite", cluster = dt[, id], coefs = "All", p_values = T))
+ci22 <- lapply(ci2, function(x) data.table(x)[, c("Coef", "beta", "CI_L", "CI_U")])
+ci22 <- lapply(ci22, function(x) x[grepl("tt", Coef), ])
+ci22 <- lapply(ci22, function(x) x[, et := gsub("tt", "", Coef)])
+ci22 <- lapply(ci22, function(x) x[, et := as.numeric(gsub("N", "-", et))])
+ci22 <- lapply(1:length(ci22), function(i) ci22[[i]][, estmethod := i+1])
+setnames(ci1, c("Coef", "beta", "CI_L", "CI_U"))
+ci1[, et := gsub(".*::", "", Coef)]
+ci1[, et := as.numeric(gsub(":treat", "", et))]
+ci1[, estmethod := 1]
+ci22 <- rbindlist(ci22)
+ci <- rbindlist(list(ci1, ci22), use.names = T, fill = T)
+ci[, estmethod := factor(estmethod, labels = c("fixest", "lm et=-1", "lm et=-1 id=1", "lm et=-21 id=1"))]
+```
+```{r plot fixest compare, echo = F, warning = F, fig.cap = "Parameter estimates: `fixest` and other specifications", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+ggplot(data = ci, 
+  aes(x = et, y = beta, group = estmethod, color = estmethod, 
+    shape = estmethod, fill = estmethod)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .3, position = position_jitterdodge(dodge = .5)) +
+  geom_line() +   
+  ThisTheme + theme(
+    legend.text=element_text(size=10),
+    legend.key.size=unit(.5, "cm")
+  ) +
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous(limits = c(-22, 50)) +
+  scale_x_continuous(limits = c(-22, 28)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+We see that `fixest`, "lm et=-1", "lm et=-1 id=1" are equivalent, "lm et=-21" gives the estimates with a pararell shift to the above, and with larger SEs.  
+
+## Cubic trends
+
+
+We need to manually drop -1 (for baseline) or $-L=-10$ (for zero mean pre-period effects) from event time variables, Hawaii from State dummy variables (for linear independence), 1960, 1988 from time dummy variables (for accommodating a linear trend). In below, this is done by creating a dummy matrix from a factor variable and dropping the chosen reference. In using restrictions $\bar{\gamma}_{s<0}=0$ or $\bar{a}_{i}=0$, we will subtract the chosen reference from each columns of a dummy matrix. 
+```{r baseline estimation, warning = F}
+for (ob in c("mr", "dv")) {
+  obj <- qread(paste0(pathsave, ob, ".qs"))
+  obj <- obj[, time2 := as.numeric(time)]
+  obj <- obj[time2 >= 1960 & time2 <= 1988, ]
+  #### State dummies
+  stdum <- makeDummyFromFactor(factor(obj[, StateName]), nameprefix = "")
+    #### Subtract Hawaii to impose \bar{a}_{i} = 0
+  stnames <- colnames(stdum)
+  setnames(stdum, stnames, gsub(" ", "", stnames))
+  stdum[, (stnames) := lapply(.SD, function(x) x-Hawaii), .SDcols = stnames]
+  stdum[, Hawaii := NULL]
+  stterms <- paste(colnames(stdum), collapse = "+")
+  #### Time dummies
+  tdum <- makeDummyFromFactor(factor(obj[, time]), nameprefix = "y")
+    #### Drop 1961, 1987 for accommodating trend and keep linear independence
+  setnames(tdum, colnames(tdum), gsub("19", "", colnames(tdum)))
+  tnames <- colnames(tdum)
+  tdum[, paste0("y", c(61, 87)) := NULL]
+  tterms <- paste(colnames(tdum), collapse = "+")
+  etdum <- makeDummyFromFactor(factor(obj[, et]), nameprefix = "et")
+  #### Event time dummies
+    #### change to easier-to-handle names
+  setnames(etdum, grepout("-", colnames(etdum)), 
+    gsub("-", "N", grepout("-", colnames(etdum))))
+  etdumpre = copy(etdum)
+  etprepost = copy(etdum)
+    #### Subtract t=-L, L=10 period to impose \bar{gamma}_{s<0} = 0
+  negtime <- grepout("N", colnames(etdum))
+  etdumpre[, (negtime) := lapply(.SD, function(x) x-etN10), .SDcols = negtime]
+  etdumpre[, etN10 := NULL]
+    #### Subtract t=-1 period to impose 
+    #### \bar{gamma}_{0} = 0, \gamma_{s\neq 0}=\gamma_{s}-\gamma_{0}
+  preposttime <- colnames(etdum)
+  etprepost[, (preposttime) := lapply(.SD, function(x) x-etN1), 
+    .SDcols = preposttime]
+  etterms <- paste(colnames(etdum), collapse = "+")
+    #### Drop -1 and -10 from et
+  etterms1 <- gsub("\\+etN1\\+", "+", etterms)
+  etterms2 <- gsub("\\+etN10", "", etterms)
+  obj1 <- data.table(obj, stdum, tdum, etdum)
+  obj1a <- data.table(obj, stdum, tdum, etprepost)
+  obj2 <- data.table(obj, stdum, tdum, etdumpre)
+    #### A: TWFE, B: TWFE+trend
+  formA. <- paste0("v ~ -1+", stterms, " + ", tterms)
+  formB. <- paste0("v ~ -1 + trend +", stterms, " + ", tterms)
+  formC. <- paste0("v ~ -1 + trend + I(trend^(2)) + I(trend^(3))+", 
+    stterms, " + ", tterms)
+  formA1 <- paste(formA., "+", etterms1)
+  formB1 <- paste(formB., "+", etterms1)
+  formC1 <- paste(formC., "+", etterms1)
+  formA2 <- paste(formA., "+", etterms2)
+  formB2 <- paste(formB., "+", etterms2)
+  formC2 <- paste(formC., "+", etterms2)
+  obj1[, id := 1:.N]
+  obj2[, id := 1:.N]
+  rA0 <- lm(as.formula(formA.), data = obj1)
+  rB0 <- lm(as.formula(formB.), data = obj1)
+  rC0 <- lm(as.formula(formC.), data = obj1)
+  rA1 <- lm(as.formula(formA1), data = obj1)
+  rB1 <- lm(as.formula(formB1), data = obj1)
+  rC1 <- lm(as.formula(formC1), data = obj1)
+  rA2 <- lm(as.formula(formA2), data = obj2)
+  rB2 <- lm(as.formula(formB2), data = obj2)
+  rC2 <- lm(as.formula(formC2), data = obj2)
+  #### All coefficients are relative to t=-1 (which is set to zero)
+  rA0a <- lm(as.formula(formA.), data = obj1a)
+  rB0a <- lm(as.formula(formB.), data = obj1a)
+  rC0a <- lm(as.formula(formC.), data = obj1a)
+  rA1a <- lm(as.formula(formA1), data = obj1a)
+  rB1a <- lm(as.formula(formB1), data = obj1a)
+  rC1a <- lm(as.formula(formC1), data = obj1a)
+  assign(paste0(ob, "reg"), list(
+    "TWFE"=rA0, "TWFE+t"=rB0, "TWFE+t3"=rC0, 
+    "TWFE+et"=rA1, "TWFE+t+et"=rB1, "TWFE+t3+et"=rC1, 
+    "TWFEa"=rA0a, "TWFEa+t"=rB0a, "TWFEa+t3"=rC0a, 
+    "TWFEa+et"=rA1a, "TWFEa+t+et"=rB1a, "TWFEa+t3+et"=rC1a, 
+    "TWFE+et, pre-period"=rA2, "TWFE+t+et, pre-period"=rB2,
+    "TWFE+t3+et, pre-period"=rC2
+    ))
+  #### CI
+  normalizationABC <- c("TWFE", "TWFE trend", "TWFE trend3")
+  normalization123 <- c("no et", "-1", "pre-mean=0")
+  Ci <- NULL
+  for (ch in 1:3) {
+    for (i in 0:2) {
+      for (j in c("", "a")) {
+        if (i==2 & j == "a") next
+        rr <- get(paste0("r", LETTERS[ch], i, j))
+        id <- as.numeric(names(rr$resid))
+        clus <- obj1[id, StateName]
+        #clus <- data.table(rr$model)[, StateName]
+        rrc <- clx(rr, cluster = clus, returnV = T)
+        clxci <- data.table(cbind(Coef = rownames(rrc$ci), rrc$est, rrc$ci))
+        clxci[, normalABC := gsub("FE", paste0("FE", j), normalizationABC[ch])]
+        clxci[, normal123 := normalization123[i+1]]
+        Ci <- rbind(Ci, clxci)
+      }
+    }
+  }
+  Ci[, period := gsub("et", "", Coef)]
+  Ci <- Ci[grepl("^.?\\d", period), ]
+  Ci[, period := gsub("N", "-", period)]
+  Ci[, period := as.numeric(period)]
+  setcolorder(Ci, c("Coef", "Estimate", "Std. Error", "t value", "Pr(>|t|)", 
+    "2.5 %", "97.5 %", "period"))
+  setnames(Ci, c("Estimate", "2.5 %", "97.5 %"), c("beta", "CI_L", "CI_U"))
+  numcols <- c("beta", "CI_L", "CI_U", "period", "Std. Error", "t value", "Pr(>|t|)")
+  Ci[, (numcols) := lapply(.SD, as.numeric), .SDcols = numcols]
+  strcols <- colnames(Ci)[!(colnames(Ci) %in% numcols)]
+  Ci[, (strcols) := lapply(.SD, factor), .SDcols = strcols]
+  Ci[grepl("mea", normal123) & period < 0, mean(beta), by = normalABC]
+  qsave(Ci, paste0(pathsave, ob, "ci.qs"))
+}
+```
+
+
+Trend terms:
+```{r trend terms table}
+library(modelsummary)
+Results <- list("Divorce rates"=dvreg, "Marriage rates"=mrreg)
+ii <- as.vector(which(unlist(lapply(dvreg, 
+  function(x) any(grepl("tre", names(coef(x))))))))
+ii <- ii[ii > 3]
+####res <- c(Results[[1]][ii], Results[[2]][ii])
+####ms <- modelsummary(res, 
+####  ####output = "gt",
+####  output = "kableExtra",
+####  stars = TRUE, 
+####  title = "Trend terms in two-way FEs of event study estimates",
+####  ####coef_omit = "Sta|time|^et.?[123][1-9]|[23]0",
+####  #### Need single quotes, double quotes give an error
+####  coef_map = c('trend' = 'Linear trend $t$', 'I(trend^(2))' = 'Squared trend $t^{2}$', 
+####    'I(trend^(3))' = 'Cubic trend $t^{3}$'),
+####  gof_omit = 'IC|Adj|F|RMSE|Log')
+#### column labels	
+###library(gt)
+###ms <- tab_spanner(data = ms, label = 'Divorce rates', columns = 2:6)
+###ms <- tab_spanner(data = ms, label = 'Marriage rates', columns = 7:11)
+res <- list("Divorce rates" = Results[[1]][ii], "Marriage rates" = Results[[2]][ii])
+ms <- modelsummary(res, 
+  ####output = "gt",
+  output = "kableExtra",
+  stars = TRUE, 
+  shape = "rbind",
+  title = "Trend terms in two-way FEs of event study estimates",
+  ####coef_omit = "Sta|time|^et.?[123][1-9]|[23]0",
+  #### Need single quotes, double quotes give an error
+  coef_map = c('trend' = 'Linear trend $t$', 'I(trend^(2))' = 'Squared trend $t^{2}$', 
+    'I(trend^(3))' = 'Cubic trend $t^{3}$'),
+  gof_omit = 'IC|Adj|F|RMSE|Log')
+library(kableExtra)
+ms <- kable_styling(ms, bootstrap_options = "striped", full_width = F)
+footnote(ms, general = "**TWFE**: two-way fixed effects of years and states; **t**: trend, **et**: even-time dummies; **t3**: linear, squared, and cubic trends; **TWFEa**: TWFE+dropping 61&87; **pre-period**: mean of pre-period = 0.")
+```
+
+
+```{r plot div reg, echo = F, warning = F, fig.cap = "Impacts on divorce rates", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+Ci <- qread(FPath("save", "dvci.qs"))
+ggplot(data = Ci, 
+  aes(x = period, y = beta, group = normal123, 
+    color = normal123, shape = normal123, fill = normal123)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .3, position = position_jitterdodge(dodge = .2)) +
+  #geom_line() +   
+  ThisTheme +
+  facet_wrap( ~ normalABC) +
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous(limits = c(-6, 5)) +
+  scale_x_continuous(limits = c(-20, 10)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+```{r plot mar reg, echo = F, warning = F, fig.cap = "Impacts on marriage rates", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+Ci <- qread(FPath("save", "mrci.qs"))
+ggplot(data = Ci, 
+  aes(x = period, y = beta, group = normal123, 
+    color = normal123, shape = normal123, fill = normal123)) + 
+  geom_pointrange(aes(ymin = CI_L, ymax = CI_U), 
+    size = .3, position = position_jitterdodge(dodge = .2)) +
+  #geom_line() +   
+  ThisTheme +
+  facet_wrap( ~ normalABC) +
+  scale_fill_viridis_d(end = .7)+
+  scale_colour_viridis_d(end = .7)+
+  scale_y_continuous(limits = c(-10, 10)) +
+  scale_x_continuous(limits = c(-20, 10)) +
+  geom_hline(yintercept = 0, colour = "green")
+```
+
+When trending terms (and their cubic terms) are included (and their interactions with state dummies in the richest specifications), event study estimates also tend to have trends similar to gross trends, declining in marriage rates. In the case of divorce rates, use of trend terms breaks down estimation and event study estimates have the magnitude of thousands. This suggests possible collinearity bewteen linear trend and the time-to-event variable. In below, I will use TWFE and + only squared linear trend. 
+
+# Final remarks
+
+* Choice of normalization can be consequential. A careful choice is needed.  
+* For the outcomes showing S shaped growth, such as divorce and marriage rates in the US, simple linear trend may not be the best choice.  
+* Traditionally, statistics used logistic regressions for S shaped outcomes. But this means we cannot use linear models, or TWFE event study design.  
+* A more flexible trending modelling with TWFE may be fruitful. Cubic trends did not fit well in the current data.  
+
+```{r bib, include=FALSE}
+#### create a bib file for the R packages used in this document
+knitr::write_bib(x = "rmarkdown", file = paste0(path, 'seiro.bib'))
+```
+
+<script>
+  $(".toggle").click(function() {
+    $(this).toggleClass("open");
+  });
+</script>
+

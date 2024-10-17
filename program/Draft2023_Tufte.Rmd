@@ -1,0 +1,960 @@
+---
+title: "Woman's name right and marital records in the US"
+author: "Seiro Ito"
+date: "`r format(Sys.time(), '%Y年%m月%d日 %R')`"
+output:
+  tufte::tufte_html:
+    citation_package: natbib
+    toc: true
+  pdf_document:
+     latex_engine: xelatex
+     fig_width: 7
+     fig_height: 6
+     fig_caption: true
+always_allow_html: true
+header-includes:
+    - \usepackage{amsmath}
+    - \usepackage{amssymb}
+    - \usepackage{amsfonts}
+    - \usepackage{bookmark} 
+    - \usepackage{tabularx, booktabs, xcolor, colortbl, longtable} 
+    - \usepackage{natbib} 
+    - \usepackage{xltxtra} 
+    - \usepackage{zxjatype} 
+    - \usepackage[ipa]{zxjafont} 
+    - \usepackage{marginnote}
+bibliography: c:/seiro/settings/Tex/seiro.bib
+link-citations: yes
+#### c:\seiro\languages\R\R-4.2.1\bin\x64\Rscript.exe -e "path <- 'c:/data/NameRight/program/'; rmarkdown::render('c:/data/NameRight/program/Draft2023_Tufte.Rmd')"
+# setwd(path <- "c:/data/NameRight/"); rmarkdown::render("program/Draft2023_Tufte.Rmd")
+#### rmarkdown::render(paste0(path, "program/Draft2023_Tufte.Rmd"), output_format = "pdf_document")
+#### cd c:/data/NameRight/
+#### git init
+#### git config --global user.name "SeiroIto"
+#### git remote add origin https://github.com/SeiroIto/NameRight.git  ## specify remote
+#### git add c:/data/NameRight/program c:/data/NameRight/save   ## this adds 
+#### git rm --cached -r c:/data/NameRight/source/  ## untrack files in source folder
+#### git rm --cached -r c:/data/NameRight/program/clubSandwich-main/
+#### git rm --cached -r c:/data/NameRight/program/cached/
+#### git rm --cached -r c:/data/NameRight/save/*.qs
+#### git rm --cached -r c:/data/NameRight/save/*.prn
+#### git commit -am "initial commit"
+#### git ls-tree -r main --name-only ## list all tracked files
+#### git push -f origin main  ## push files to remote
+#### if error with push fatal: the remote end hung up unexpectedly, run below
+#### git config http.postBuffer 2000000000
+#### git push -f origin main  ## push files to remote
+---
+<!-- Using 2 byte characters causes an error in dynamic deploy in Jekylle via git push. knitting works fine.
+Error reading file /github/workspace/program0/Draft2023_Tufte.Rnw: invalid byte sequence in UTF-8 
+-->
+
+```{css, echo=F}
+.SeiroBenign {
+  background-color: #FFEBCD;
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+.SeiroLightGreen {
+  background-color: #D0F0C0; /* Tea green */
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  font-family: Noto S	ans;
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+```
+```{r setup, include=FALSE} 
+#### include = F <==> echo=F & results = F
+library(tufte)
+#### invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'), 
+  margin_references = TRUE,
+  # remove leading hashes in html output
+  comment = "", class.source = "SeiroBenign", class.output = "SeiroLightGreen")
+options(htmltools.dir.version = FALSE)
+```
+<!-- reading this file makes echo = F and results = F for reasons I don't understand -->
+```{r option setting 1, eval = F, cache = F, child='c:/migrate/R/rmarkdownPreamble/rmarkdown_initial_option_setting_chunk.Rmd'}
+```
+```{r option setting 2, echo = F, cache = F, warning = F, message = F, results = "hide"}
+knitr::opts_knit$set(base.dir = path)
+knitr::opts_chunk$set(
+  fig.path=paste0(path, '/program/figure/'), 
+  cache.path=paste0(path, '/program/cache/ReadData'), 
+  cache = FALSE, echo = FALSE, results = 'markup', 
+  tidy.opts=list(blank=FALSE, width.cutoff=40))
+options(digits = 6, width = 80)
+library(data.table)
+library(qs)
+pathprogram <- paste0(path, "program/");  
+pathsource <- paste0(path, "source/")
+pathsave <- paste0(path, "save/")
+pathfigure <- paste0(pathprogram, "figure/")
+pathsavefigure <- paste0(pathsave, "figure/")
+dir.create(pathsave)
+dir.create(pathsavefigure)
+source("c:/seiro/settings/Rsetting/panel_estimator_functions.R")
+source("c:/seiro/settings/Rsetting/functions.R")
+source(paste0(pathprogram, "tabulate_est_IPUMS.R"))
+```
+```{css, echo=FALSE}
+/* Define a margin before hX (header level X) element */
+h1  {
+  margin-top: 3ex;
+  margin-bottom: 3ex;
+  /* background: #c2edff; */ /*背景色*/
+  padding: 0.5em;/*文字まわり（上下左右）の余白*/
+}
+h2  {
+  margin-top: 2ex;
+  margin-bottom: 2ex;
+  padding: 0.5em;/*文字周りの余白*/
+  color: #010101;/*文字色*/
+  /* background: #eaf3ff; */ /*背景色*/
+  /* border-bottom: solid 3px #516ab6; */ /*下線*/
+}
+```
+\def\Perp{\mkern2mu\rotatebox[origin=c]{90}{$\models$}\mkern2mu}
+\newcommand{\mpage}[2]{\begin{minipage}[t]{#1}#2\end{minipage}}
+\newcommand{\cnvp}{\stackrel{p}{\longrightarrow}}
+\newcommand{\cnvd}{\stackrel{d}{\longrightarrow}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\E}{{\Large\varepsilon}}
+\newcommand{\NU}{{\Large\nu}}
+\newcommand{\0}{{\mathbf{0}}}
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+\newcommand{\bfbeta}{\boldsymbol{\beta}}
+\newcommand{\bfgamma}{\boldsymbol{\gamma}}
+\newcommand{\bftheta}{\boldsymbol{\theta}}
+\newcommand{\bfeta}{\boldsymbol{\eta}}
+\newcommand{\bfmu}{\boldsymbol{\mu}}
+\newcommand{\bflambda}{\boldsymbol{\lambda}}
+\newcommand{\ind}{\mathrel{\perp\!\!\!\!\perp}}
+\renewcommand{\thefootnote}{*\arabic{footnote}}
+
+(US婚姻データの記述統計)  
+
+
+
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\setlength{\parindent}{1em}
+\vspace{2ex}
+
+
+This memo summarises the legal cases that affirm woman's name rights by US States. It also examines the data sets: NBER data and NCH data. We will use NCH data due to incompleteness of NBER data.
+
+# Read marriage/divorce files
+
+## NBER marriage data is at individual level but incomplete
+
+It is not usable for a rigorous analysis.
+
+```{r read files}
+#### marriage
+m2 <- qread(paste0(pathsave, "mar2.qs"))
+setkey(m2, StateName, DateMarried)
+m2[, .(StateName, DateMarried, race.g, agem.g, race.b, agem.b)]
+m2[, YearMon := as.IDate(paste0(year, "-", month, "-01"), 
+  format = "%Y-%m-%d")]
+m2ym <- m2[, .(
+    Mar=.N, 
+    MedianAge.g = median(agem.g, na.rm = T), 
+    MedianAge.b = median(agem.b, na.rm = T), YM=YearMon[1]),
+  by = .(StateName, year, month)]
+```
+
+**Dunn v. Palermo** of Tennessee (April 7, 1975) and neighbouring states
+
+```{r Tennessee Dunn v Palermo 1975}
+library(ggplot2)
+ThisTheme <-   theme(
+  legend.position = "bottom", 
+  legend.direction = "horizontal",
+  legend.text=element_text(size=6),
+  legend.key.size=unit(.25, "cm"),
+  legend.title = element_blank()
+  )
+#### drop virginia "V.*a$" as it has a data problem
+dunn <- m2ym[grepl("Ten|Ken|Missi|Ark|Alab|Geor|Nor.*C", StateName), ]
+g <- ggplot(data = dunn, aes(x = YM, y = Mar, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_y_log10() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = as.IDate("1975-04-01", format = "%Y-%m-%d"), 
+    colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", "Georgia" = "lightblue", 
+    "Kentucky" = "lightblue", "Mississippi" = "lightblue", 
+    "North Carolina" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(
+  paste0(pathsave, "NumberOfMarriagesDunnPalermo.pdf")
+  , width = 14/2.54, height = 8/2.54)
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot, echo = F, fig.cap = "Number of marriages: Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+ggplot(data = dunn, aes(x = YM, y = Mar, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_y_log10() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = as.IDate("1975-04-01", format = "%Y-%m-%d"), colour = "red") + 
+  scale_color_manual(values = c(
+  "Alabama" = "lightblue", "Arkansas" = "lightblue", "Georgia" = "lightblue", "Kentucky" = "lightblue",
+  "Mississippi" = "lightblue", "North Carolina" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+```
+
+There is an obvious data problem with Tennessee in NBER data. The counts are almost halved after 1975. We cannot use it for analysis.
+```{r Tennessee}
+reshape(dunn[grepl("Tenn", StateName) & 1971 <= year & year <= 1976, 
+  .(StateName, year, month, Mar)],
+  direction = "wide", idvar = c("StateName", "month"), 
+  timevar = "year", v.names = "Mar")
+```
+
+## NCH marriage data is at state level but complete
+
+```{r read NCH marriage data, warning = F}
+#### marriage
+ms <- fread(paste0(pathsource, "CDC-NCHS/MarriageNCHS.prn"), 
+  header = T)
+m8 <- lapply(list.files(paste0(pathsource, "CDC-NCHS/ocr./"), 
+  pattern = "8.c.*prn", full.names = T), fread, header = T)
+m8 <- lapply(m8, function(x) x[, 1:6])
+m8[[2]] <- m8[[2]][, -(2:3)]
+m8 <- Reduce(function(...) merge(..., all = TRUE), m8)
+m1 <- Reduce(function(...) merge(..., all = TRUE), list(ms, m8))
+setnames(m1, grepout("^1", colnames(m1)), 
+  paste0("v.", grepout("^1", colnames(m1))))
+m1L <- reshape(m1, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(m1)))
+setkey(m1L, time)
+m1LW <- reshape(m1L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = "v")
+setnames(m1LW, grepout("^v", colnames(m1LW)), 
+  gsub("^v.", "", grepout("^v", colnames(m1LW))))
+m1L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+m1L[, vs := v-m6165]
+m1L[, vs := vs/var(vs, na.rm = T)^(.5), by = .(StateName)]
+m1L[, m6165 := NULL]
+#### divorce data, marriage rate data follow the same steps, 
+#### so omitted from markdown.
+#### Tennessee: Halved in 1975? Check for NBER data integrity.
+t(m1LW[1972 <= time & time <= 1978, .(time, Tennessee)])
+```
+This shows NBER data for Tennessee has a problem. Number of marriage did not halve in 1975.  
+
+Display NAs in divorce data. There are some before 1959.  
+```{r read NCH divorce data, echo = F, warning = F}
+#### divorce
+ds <- fread(paste0(pathsource, "CDC-NCHS/divorce.prn"), 
+  header = T)
+d8 <- lapply(list.files(paste0(pathsource, "CDC-NCHS/ocr./"), 
+  pattern = "div.*prn", full.names = T), fread, header = T)
+d8 <- lapply(d8, function(x) x[, 1:7])
+d8[[2]] <- d8[[2]][, -c(2:3, 7)]
+d8[[3]] <- d8[[3]][, -7]
+d8 <- Reduce(function(...) merge(..., all = TRUE), d8)
+d1 <- Reduce(function(...) merge(..., all = TRUE), list(ds, d8))
+setnames(d1, grepout("^1", colnames(d1)), 
+  paste0("v.", grepout("^1", colnames(d1))))
+d1L <- reshape(d1, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(d1)))
+d1L[, v := as.numeric(v)]
+#### using Dunn v Palermo (1974) as reference year
+####d1L[, vs := v-v[time==1974], by = .(StateName)]
+#### using 1961-1965 as reference period
+d1L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+d1L[, vs := v-m6165]
+d1L[, vs := vs/var(vs, na.rm = T)^(.5), by = .(StateName)]
+d1L[, m6165 := NULL]
+setkey(d1L, time)
+d1LW <- reshape(d1L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = grepout("^v", colnames(d1L)))
+####setnames(d1LW, grepout("^v", colnames(d1LW)), 
+####  gsub("^v.", "", grepout("^v", colnames(d1LW))))
+#### Discard years before last NA in v, save it as d2L
+d1L[, LastNAYear := max(time[is.na(v)]), by = StateName]
+d1L[time == LastNAYear, ][order(StateName, time)]
+d2L <- d1L[time > LastNAYear, ]
+d1L[, LastNAYear := NULL]
+d2L[, LastNAYear := NULL]
+qsave(m1LW, paste0(pathsave, "marriage.qs"))
+qsave(m1L, paste0(pathsave, "m1L.qs"))
+qsave(d1LW, paste0(pathsave, "divorce.qs"))
+qsave(d1L, paste0(pathsave, "d1L.qs"))
+qsave(d2L, paste0(pathsave, "d2L.qs"))
+```
+```{r read NCH rate data, warning = F, echo = F}
+#### marriage rate
+ms <- fread(paste0(pathsource, "CDC-NCHS/MarriageRate.prn"), 
+  header = T)
+ms <- data.table(ms[, 1], sapply(ms[, -1], function(x) x/10))
+m8 <- lapply(list.files(paste0(pathsource, "CDC-NCHS/ocr./"), 
+  pattern = "8.c.*prn", full.names = T), fread, header = T)
+m8 <- lapply(m8, function(x) x[, c(1, 7:11), ])
+m8[[2]] <- m8[[2]][, -(2:3)]
+m8 <- Reduce(function(...) merge(..., all = TRUE), m8)
+m2 <- Reduce(function(...) merge(..., all = TRUE), list(ms, m8))
+setnames(m2, grepout("^1", colnames(m2)), 
+  paste0("v.", grepout("^1", colnames(m2))))
+m2L <- reshape(m2, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(m2)))
+options(warn = 0)
+m2L[, v := as.numeric(v)]
+m2L[, vs := v/var(v)^(.5), by = .(StateName)]
+#### using Dunn v Palermo (1974) as reference year
+m2L[, vs := vs-vs[time==1974], by = .(StateName)]
+#### using 1961-1965 as reference period
+m2L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+m2L[, vs := v-m6165]
+m2L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+m2L[, m6165 := NULL]
+setkey(m2L, time)
+m2LW <- reshape(m2L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = grepout("^v", colnames(m2L)))
+setnames(m2LW, grepout("^v", colnames(m2LW)), 
+  gsub("^v.", "", grepout("^v", colnames(m2LW))))
+qsave(m2LW, paste0(pathsave, "marriagerate.qs"))
+qsave(m2L, paste0(pathsave, "m2L.qs"))
+```
+```{r implied pop divorce rate}
+#### implied population
+library(qs)
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m12L <- merge(m2L, m1L, by = c("StateName", "time"), all = T)
+m12L[, pop := round(v.y/(v.x/100), 0)]
+m12L <- m12L[, .(StateName, time, pop)]
+#### compute divorce rate
+d2L <- qread(paste0(pathsave, "d2L.qs"))
+d2L[, v := as.numeric(v)]
+d12L <- merge(d2L, m12L, by = c("StateName", "time"))
+setnames(d12L, "v", "case")
+d12L[, v := round((case/pop)*100, 1)]
+d12L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+d12L[, vs := v-m6165]
+d12L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+d12L[, m6165 := NULL]
+qsave(d12L, paste0(pathsave, "d12L.qs"))
+```
+
+```{r Tennessee Dunn v Palermo 1975 plot 2, echo = F, fig.cap = "Number of marriages: Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F, warning = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|Nor.*C", StateName), ], 
+  aes(x = time, y = v, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_y_log10() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageLevels.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot standardized 1974 as zero, echo = F, fig.cap = "Number of marriages (standardized, 1974 = 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+#### 1974 as the reference period
+m1L[, vs := v-v[time==1974], by = .(StateName)]
+m1L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedLevels1974AsZero.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot standardized, echo = F, fig.cap = "Number of marriages (standardized, mean of 1961-65 as zero): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedLevels.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot rate standardized 1974 as zero, echo = F, fig.cap = "Marriage rates (standardized, 1974=0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+#### 1974 as the reference period
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m2l <- m2L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ]
+m2l[, vs := v-v[time==1974], by = .(StateName)]
+m2l[, vs := vs/var(vs)^(.5), by = .(StateName)]
+g <- ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedRates1974AsZero.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot rate standardized, echo = F, fig.cap = "Marriage rates (standardized, mean of 1961-65 as 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+#### 1961-1965 as the reference period
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m2l <- m2L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ]
+g <- ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedRates.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+
+```{r plot horizontally aligned Tennessee, eval = F, echo = F, fig.show = "hold", fig.fullwidth = F, out.width = "49%"}
+#### 1961-1965 as the reference period
+ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+
+```
+
+```{r plot pdf horizontally aligned Tennessee, eval = F, echo = F, fig.show = "hold", fig.fullwidth = F}
+knitr::include_graphics(paste0(pathsavefigure, 
+  c(
+    "TennesseeMarriageStandardisedRates.pdf", 
+    "TennesseeMarriageStandardisedLevels.pdf"
+    #,
+    #"TennesseeMarriageLevels.pdf"
+    )), dpi = NA)
+```
+Event-study plots of standardised marriage rates (left) and standardised marriages (right) in Tennessee and contiguous states. Standardisation takes mean of 1974 (top row) and 1961-65 as its mean (bottom row) and set to zero. Rate = marriages / 1000, where population is based on censuses (April 1 of 1960, 70, 80) and interpolated estimates of July 1 of each year. 
+
+```{r plot 1974AsZero pdf horizontally aligned Tennessee for pdf, eval = T, echo = F, fig.show = "hold", fig.fullwidth = F}
+knitr::include_graphics(paste0(pathsavefigure, 
+  c(
+    "TennesseeMarriageStandardisedRates1974AsZero.pdf", 
+    "TennesseeMarriageStandardisedLevels1974AsZero.pdf"
+    #,
+    #"TennesseeMarriageLevels.pdf"
+    )), dpi = NA)
+```
+```{r raw plot pdf horizontally aligned Tennessee for pdf, eval = T, echo = F, fig.show = "hold", fig.fullwidth = F}
+knitr::include_graphics(paste0(pathsavefigure, 
+  c(
+    "TennesseeMarriageStandardisedRates.pdf", 
+    "TennesseeMarriageStandardisedLevels.pdf"
+    #,
+    #"TennesseeMarriageLevels.pdf"
+    )), dpi = NA)
+```
+
+These plots indicate that Tennessee before Dunn v. Palermo had low marriage numbers in levels and in rates, and they elevated to one of the top in the group of states in 1972-1981. We cannot see any obvious impacts on marriages of Dunn v. Palermo from the plots.
+
+```{r plot divorce Tennessee, eval = T, echo = F, warning = F, fig.cap = "Divorce rates (standardized, 1961-65 mean = 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+d12L <- qread(paste0(pathsave, "d12L.qs"))
+ggplot(data = d12L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+
+```
+
+Divorce rates also do not seem to respond to Dunn v. Palermo for Tennessee.
+
+By a casual observation, marriage and divorce do not seem to be affected by asserting woman's name rights.
+
+# History of woman's name rights in the US
+
+
+## An overview 
+
+Most of the name right research starts with around 1900's, the period of no name right. Then proceeds to the 1970's when woman's name right was affirmed in various litigations.  
+
+There are many litigations that were negative on the right before the landmark *Stuart v. Board of Directors (1972)* and *Dunn v. Palermo (1974)* which gave affirmative decisions. In negating the right, many courts counted on [*Chapman v Phoenix National Bank (1881)*](https://casetext.com/case/chapman-v-phoenix-natl-bk-of-city-of-ny). As seen in below, however, *Chapman* is now regarded as an outlier that does not resonate well with historical legal precedents.^[In [*Davis and Roos (1976)*](https://casetext.com/case/davis-v-roos#:~:text=It%20is%20our%20conclusion%20that%20history%20or%20precedent%20fails%20to%20support%20the%20%22Chapman%22%20enunciations.), the court writes: It is our conclusion that history or precedent fails to support the "Chapman" enunciations.] This follows from the research on common law in even earlier years of England.
+
+In [*Davis v. Roos (1976)*](https://casetext.com/case/davis-v-roos#:~:text=the%20common%20law%20of%20England%20on%20July%204%2C%201776%2C%20did%20not%20by%20operation%20of%20law%20engraft%20the%20husband%27s%20surname%20upon%20the%20wife.), the court noted the earliest case in the common law right on woman's name:  
+
+> the common law of England on July 4, 1776, did not by operation of law engraft the husband's surname upon the wife. 
+
+Similarly, in *Malone v. Sullivan, 124 Ariz. 469, 470 (Ariz. 1980)*, the English court in 1823 is quoted as: 
+
+> It has been asserted in the argument, that a married woman cannot legally bear any other name than that which she has acquired in wedlock; but the fact is not so; a married woman may legally bear a different name from her husband, and very many living instances might be quoted in proof of the fact. [The King v. The Inhabitants of St. Faith's Newton, 3 Dowling Ryland Reports 348, 352.]  
+
+[*Malone v. Sullivan (1980)*](https://casetext.com/case/malone-v-sullivan?__cf_chl_tk=QeU0PxkkDYrcwvpVuCLMyRCib6JBZ85sHh08oGix5r8-1703749664-0-gaNycGzNFRA#:~:text=It%20would%20appear%20that%20the%20custom%20of%20the%20wife%27s%20taking%20the%20name%20of%20the%20husband%20at%20the%20time%20of%20marriage%20remained%20just%20that%2C%20custom%2C%20and%20never%20became%20law.%20It%20was%20and%20is%20a%20question%20of%20choice%20and%20reputation.)
+
+> It would appear that the custom of the wife's taking the name of the husband at the time of marriage remained just that, custom, and never became law. It was and is a question of choice and reputation.  
+> We do not believe that *Chapman* is persuasive.  
+
+Another good historical summary is given by [*Opinion No. 75-281 (1975)*, AG (Ops.Okla.Atty.Gen. Nov. 14, 1975)](https://casetext.com/case/opinion-no-25001?sort=relevance&resultsNav=false&q=#:~:text=(Okl.%201971).-,A%20few%20courts,-have%20enunciated%20a). The oldest case being quoted in this opinion dates back to 1897: "Also, in *Rice v. State (1897)*^[37 Tex. Cr. R. 36, 38 S.W. 801 (1897)], the Court quoted the following language with approval."  
+
+> It is said, the husband being the head of a family, the wife and children adopt his family name, --- by custom, the wife is called by the husband's name; but whether marriage shall work any change of name at all is, after all, a mere question of choice, and either may take the other's name, or they may join their names together.   
+
+The most important phrase in this quote is "either may take the other's name" part that indicates bloom and bride may take their own or other's name. It acknowledges the woman's name right to use her maiden name. The last part, "or they may join their names together", refers to double barrell, including the hyphenated name, to be used. Although affirmative to woman's name right, it is not evident if it also affirms a couple to use different surnames.   
+
+The opinion goes on: "In *State v. Green (1961)*^[114 Ohio App. 497, 177 N.E.2d 616 (1961)], the Court, in determining the validity of candidacy for office of a married woman who sought to have her maiden name listed on the ballot, examined the English common law, stating:" 
+
+> It is only by custom, in English speaking countries, that a woman, upon marriage, adopts the surname of her husband in place of her father. . . . In England, from which came our customs with respect to names, a woman is permitted to retain her maiden surname upon marriage if she so desires. 
+
+> M. Turner-Samuels, in his book on 'The Law of Married Women' at page 345 [@TurnerSamuels1957, p.345], states: "In England, custom has long since ordained that a married woman takes her husband's name. This practice is not invariable; not compellable by law. *A wife may continue to use her maiden, married, or any other name she wishes to be known by.*"  
+
+@Lamber1973[p.781] notes on the practice in the England:  
+
+> Men sometimes adopted their wives' surnames, and it was common for children of prominent or wealthy women to adopt their mother's surname.  
+
+
+## No name right (-1960)
+
+@Spencer1973[p.677] writes that courts have consistently held that a woman automatically assumes husband's surname by operation of law, not merely as a matter of custom. For starters, Spencer (1973, p.667) cites NY Court of Appeals [*Chapman v Phoenix National Bank No.85 NY (1881)*](https://casetext.com/case/chapman-v-phoenix-natl-bk-of-city-of-ny) as the first important American case of not allowing woman's name rights:  
+
+> . . . a woman, upon marriage, takes her husband's surname. That becomes her legal name, and _she ceases to be known by her maiden name. ...(snip)... Her maiden name is absolutely lost, and she ceases to be known thereby._  
+
+In [*People* ex rel. *Rago v Lipsky (1941)*](https://casetext.com/case/people-ex-rel-rago-v-lipsky), the court sites *Freeman and Chapman ()* that declares (below quote is from Spencer 1973, p.671)^[This is not an exact quote: [Under common law principles and immemorial custom, upon marriage, woman abandons her maiden name and takes husband's surname, with which is used her own given name.](https://casetext.com/case/people-ex-rel-rago-v-lipsky#:~:text=Under%20common%20law%20principles%20and%20immemorial%20custom%2C%20upon%20marriage%2C%20woman%20abandons%20her%20maiden%20name%20and%20takes%20husband%27s%20surname%2C%20with%20which%20is%20used%20her%20own%20given%20name.)]  
+
+> . . . it is well settled by common-law principles and immemorial custom that _a woman upon marriage abandons her maiden name and takes her husband's surname._  
+
+However, the relationship between the law and the custom, where traditionally the law demands a woman to change the surname and is also accepted as a custom, began to switch in some courts. In Ohio, State ex rel. *Bucher v Brower (1941)* and [*State, ex rel. Krupa v. Green (1961)*](https://casetext.com/case/state-ex-rel-krupa-v-green), both courts hold that a woman takes her husband's surname as a matter of custom, rather than automatic operation of law. 
+
+
+In *Forbush v. Wallace (Sep 28, 1971)*, Alabama District Court [concludes](https://casetext.com/case/forbush-v-wallace#:~:text=this%20Court%20that-,plaintiff%27s%20motion,-for%20a%20preliminary) that it is not a constitutional right for a woman to use her maiden name in the driver's license ^[. . . "plaintiff's motion" (that the Alabama Department of Public Safety's regulation that requires a married woman to use her husband's surname in obtaining a driver's license in violation of the Fourteenth Amendment to the United States Constitution) " ... is hereby denied."], but it no longer refers it as an operation of law. 
+
+
+## After 1971
+
+After *Forbush v. Wallace (Sep 28, 1971)*, the courts started to lean towards affirmative to woman's name right by referencing the common law stating anyone can choose one's own name without a legal proceeding. This is under the pretext that the common law regarded the Christian name, with the sanction of baptism behind it, as all important [(Rice v. Department of Health \& Rehabilitative Services, 386 So. 2d 844 (Fla. Dist. Ct. App. 1980)).](https://casetext.com/case/rice-v-dhrs#:~:text=The%20common%20law%20regarded%20the%20Christian%20name%2C%20with%20the%20sanction%20of%20baptism%20behind%20it%2C%20as%20all%20important.)  
+
+Legal experts started to question the restrictions imposed by statutes despite the common law name rights, as in @BysiewiczMacDonnell1972[p.603]:  
+
+> The absence of name change requirement at the time of marriage should invalidate any other effort to compel adoption of the husband's surname. _If the state wishes the two parties to take husband's surname at marriage, it can so provide; the only one that has done so is Hawaii._^[Hawaii [&sect; 574-a](https://www.capitol.hawaii.gov/slh/Years/SLH1975/SLH1975_Act114.pdf): Every married woman shall adopt her husband's surname as a family name.]
+
+
+
+
+As stated in [*Matter of Halligan (1974)*](https://casetext.com/case/matter-of-halligan-3#:~:text=Under%20the%20common%20law%20a%20person%20may%20change%20his%20or%20her%20name%20at%20will%20so%20long%20as%20there%20is%20no%20fraud%2C%20misrepresentation%20or%20interference%20with%20the%20rights%20of%20others%20(%20Smith%20v.%20United%20States%20Cas.%20Co.%2C%20197%20N.Y.%20420%2C%20428%2D429%3B%20Matter%20of%20Wing%2C%204%20Misc.2d%20840).), 
+
+> Under the common law a person may change his or her name at will so long as there is no fraud, misrepresentation or interference with the rights of others (Smith v. United States Cas. Co., 197 N.Y. 420, 428-429; Matter of Wing, 4 Misc.2d 840). ... _Under common law the change is accomplished by usage or habit._   
+
+
+
+Spencer (1973) classifies the causes of a legal challenge on woman's name right:  
+
+* Incidental: Convenience of administrative procedure, such as court notification using husband's surname, is at issue.  
+* Direct: A direct attack on the marital surname rule. The legal surname of woman is at issue, such as voter registration under the woman's maiden name. 
+
+The opinion also notes the divide in the legal decisions^["A few courts have enunciated a common law rule that a woman, upon her marriage, takes her husband's surname by operation of law [Chapman v. Phoenix National Bank, 85 N.Y. 437 (1881); People ex rel. Rago v. Lipsky, 327 Ill. App. 63, 63 N.E.2d 462 (1945), Forbush v. Wallace, 341 F. Supp. 217 (N.D. Ala. 1971)]. However, the most comprehensive examination of the common law rule regarding a woman's surname upon marriage is *Stuart v. Board of Supervisors of Elections (1972)* [266 Md. 440, 295 A.2d 223, 225 (1972)], wherein the Court stated: 'What constitutes the correct legal name of a married woman under common law principles is a question which has occasioned a sharp split of authorities...' "].
+
+
+The opinion on the legal trends in 1970's notes that the *Stuart* case in 1972 marks the turnaround. It writes: "Of the recent decisions regarding a married woman's surname, the *Stuart* case is the better reasoned one. In it, the Court:"  
+
+> . . . Recognized the common law right of any person, absent a statute to the contrary, . . . if a married woman could lawfully adopt an assumed name without legal proceedings, the Maryland law manifestly permitted *a married woman to retain her birth given name* by the same procedure of consistent, nonfraudulent use following her marriage.  
+
+*Stuart*'s court also notes that the law does not automatically establish majority choice of using husband's surname as a law^[That a married woman's surname does not become that of her husband where . . . she evidences a clear intent to consistently and nonfraudulently use her birth given name subsequent to her marriage. Thus . . . the mere fact of the marriage does not, as a matter of law, operate to establish the custom and tradition of the majority as a rule of law binding upon all. (p. 227)].  
+
+Finally, the opinion decides on the Oklahoma case:^["With regard to voluntary name change, prior to the effective date of the Change of Name Act, supra, Oklahoma followed the common law rule stated in Syllabus 1 by the Court in *Huff v. State Election Board (1934)* [168 Okl. 277, 32 P.2d 920, 93 A.L.R. 906 (1934)]. A person may, at common law, change his or her name in good faith and for an honest purpose, by adopting a new name and transacting his or her business and holding himself or herself out under the new name, with the acquiescence and recognition of his or her friends and acquaintances, and this right is not abrogated by the Constitution or any statute of this state. The name that a woman assumes by marriage not being governed by statutory provisions, and the allowance by the exclusionary section of the Change of Name Act (viz., 1637, supra) of a change of name by marriage without formal court proceedings, permit a married woman to retain her maiden surname, or to assume her husband's surname and retain all or as much of her maiden name as she chooses."]  
+
+> The name that a woman assumes by marriage not being governed by statutory provisions, and the allowance by the exclusionary section of the Change of Name Act (viz., 1637, supra) of a change of name by marriage without formal court proceedings, permit a married woman to retain her maiden surname, or to assume her husband's surname and retain all or as much of her maiden name as she chooses.  
+
+
+
+Opinions of judges are found in https://law.justia.com/ or https://casetext.com/case/. Another great resource is https://commonlaw.name/ where legal cases of name changes are collected for each state. 
+
+
+# Creating event date file
+
+```{r read law files}
+LFlist <- lapply(list(
+  paste0(pathsave, "Augustine1997Footnote18.tex")
+  , paste0(pathsave, "MacDougallFootnote9.prn")
+  , paste0(pathsave, "FirstYearAppearingInMacDougallFootnote9.prn")
+  ), fread)
+names(LFlist) <- c("Augustine", "MacDougall", "MacDougallYear")
+setnames(LFlist[[2]], "reference", "ref")
+```
+
+@MacDougall1985[footnote9] and @Augustine1997[footnote18] list the legal cases in each state that women's name right was acknowledged for the first time in the judicial system. 
+
+```{css toggle, echo = F}
+.toggle {
+  height: 2.0em;
+  overflow-y: hidden;
+}
+.toggle.open {
+  height: auto;
+}
+```
+
+```{r list MacDougall1985}
+sy <- merge(LFlist[[1]][, .(state, year, case, ref)], LFlist[[2]][, 
+  .(state, year, case, ref)], 
+  by = c("state", "case"), all = T, suffixes = c(".A", ".M"))
+setkey(sy, state, year.A, year.M)
+```
+
+
+```{r add to MacDougall1985}
+sy[grepl("Alab", state), ref.M := paste(ref.M, "[[Seiro added:](https://casetext.com/case/state-v-taylor-832#:~:text=and%20general%20relief.-,The%20trial%20judge,-held%20a%20hearing)  a married woman's right to register to vote in her maiden name. ...(snip)... The Board of Registrars filed an answer ...(snip)... the legal name of a married woman is her husband's surname. ...(snip)... The trial judge held a hearing ...(snip)... The order directed the board to register Taylor and Theriot in their maiden surnames. ...(snip)... The judgment of the trial court is due to be affirmed.]")]
+sy[grepl("Ari", state) & grepl("Laks", case), ref.M := paste(ref.M, "[[Seiro added:](https://casetext.com/case/laks-v-laks#:~:text=of%20the%20children%3F%22-,Appellant,-%2C%20in%20a%20memorandum)  Appellant ... had, without appellee's consent, changed the surname of the three minor children ... to that of 'Eliot-Laks', Eliot being her maiden name. ...(snip)...  the trial court found it was not in the best interest of the children to effectuate the name change. Primrock v. Wilson, 55 Ariz. 192, 100 P.2d 180 (1940). Affirmed.]")]
+sy[grepl("Ari", state) & grepl("Mal", case), ref.M := paste(ref.M, "[[Seiro added:](https://casetext.com/case/malone-v-sullivan#:~:text=Respondent%27s%20refusal%20to%20grant%20petitioner%27s%20petition%20solely%20because%20it%20was%20filed%20under%20her%20maiden%20surname%20was%20error.) Did the commissioner abuse his discretion in refusing to consider petitioner's petition for dissolution of marriage because the petition was filed in petitioner's maiden or paternal surname rather than in her husband's surname? ...(snip)... Respondent's refusal to grant petitioner's petition solely because it was filed under her maiden surname was error.]")]
+sy[grepl("Ark", state) & grepl("Apr", ref.M), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/federal/district-courts/FSupp/391/1395/1494569/#:~:text=an%20opinion%20from%20the%20Attorney%20General%20of%20Arkansas%2C%20rendered%20in%20April%2C%201974%2C%20to%20the%20effect%20that%20%22there%20is%20no%20Arkansas%20law%20which%20automatically%20changes%20a%20woman%27s%20name%20to%20that%20of%20her%20husband%20upon%20marriage.%22) an opinion from the Attorney General of Arkansas, rendered in April, 1974, to the effect that 'there is no Arkansas law which automatically changes a woman's name to that of her husband upon marriage.']")]
+sy[grepl("Ark", state) & grepl("Pamela", ref.M), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/federal/district-courts/FSupp/391/1395/1494569/#:~:text=Under%20Arkansas%20law%20a%20married%20woman%20may%20retain%20her%20maiden%20name%2C%20and%20if%20Pamela%20Walker%20did%20not%20change%20her%20name%20when%20she%20married%20she%20was%20entitled%20to%20be%20registered%20under%20her%20maiden%20name.)]")]
+sy[grepl("Ark", state) & grepl("Walk", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/federal/district-courts/FSupp/391/1395/1494569/) Amendment 51 to the Constitution of the State of Arkansas, which amendment sets up a system of permanent registration for Arkansas voters ...(snip)... in the case of a woman her name as it appears on the affidavit must be prefixed by the word 'Miss' or 'Mrs.' so as to reflect her current or past marital status. There is no comparable requirement for male registrants. Plaintiffs claim that the section, as written and applied, is violative of the Ninth, Fourteenth and Nineteenth Amendments to the Constitution of the United States. ...(snip)... We hold, therefore, that the prefix requirement violates the Equal Protection Clause of the Fourteenth Amendment;  ...(snip)... 'The Court finds that plaintiffs are entitled under Arkansas law to use whatever name they care to use as long as the use is not for fraudulent purposes.' As has been seen, that is also the view of the Attorney General of Arkansas, and it is also the view of this full Court.]")]
+sy[grepl("Cal", state), ref.M := 
+  paste(ref.M, "[Seiro added: Judge noted, in a petition for a divorce, a woman has the right to use her maiden name to file the case.]")]
+sy[grepl("Cal", state) & grepl("Wea", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/weathers-v-superior-court#:~:text=Accordingly%2C%20when%20a%20woman%20marries%2C%20she%20may%20choose%20to%20be%20known%20by%20the%20surname%20of%20her%20husband%20or%20by%20her%20maiden%20surname.) Accordingly, when a woman marries, she may choose to be known by the surname of her husband or by her maiden surname. ... (snip) ... The trial court thus exceeded its jurisdiction in refusing to entertain wife's petition for dissolution of marriage solely because the petition was filed in wife's maiden name.]")]
+sy[grepl("Cal", state) & grepl("Wea", case), ref.A := 
+  paste(ref.A, "[[Seiro added:](https://casetext.com/case/weathers-v-superior-court#:~:text=the%20issue%20of-,the%20right%20of%20a%20wife,-who%20during%20marriage)  the right of a wife who during marriage used her maiden name to petition for a dissolution of marriage in that name rather than the surname of her husband. We conclude that the wife has the right so to file her petition. ...(snip)... Accordingly, when a woman marries, she may choose to be known by the surname of her husband or by her maiden surname. ...(snip)... Although married, she may maintain an action in court using the name by which she was known prior to marriage. ([Cherrigan v. City etc. of San Francisco, 262 Cal.App.2d 643, 653, June 3, 1968](https://casetext.com/case/cherrigan-v-city-etc-of-san-francisco#p653) ])")]
+sy[grepl("Conn", state) & grepl("Custer", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/custer-v-bonadies) Since the plaintiff married women established a clear legal right to register to vote under their maiden names, which they consistently use, and since no other adequate remedy exists, they are entitled to relief by mandamus.]")]
+sy[grepl("Dist", state) & grepl("Brown", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/brown-v-brown-423#:~:text=The%20case%20is%20remanded%20and%20the%20trial%20court%20is%20directed%20to%20restore%20to%20appellant%20her%20maiden%20name.)] In this appeal from a judgment of divorce, appellant claims that the trial court erred in denying her request that her maiden name be restored. We agree and remand to the trial court with directions that appellant's maiden name be restored.]")]
+sy[grepl("Flor", state) & grepl("Mar", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/marshall-v-state-133) Appellant, a married woman, filed a petition with the Leon County Circuit Court seeking to establish her maiden or birth name as her legal name even though she continued her marriage with her husband. There is nothing in Florida Statutes, &sect; 62.031 which prohibits a married woman from establishing her birth name as her legal name even though her marriage relationship continues.]")]
+sy[grepl("Fl", state) & grepl("Dav", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/davis-v-roos#:~:text=The%20decision%20in%20Forbush) The decision in Forbush was squarely bottomed upon the court's observation that: ['Alabama has adopted the common law rule that upon marriage the wife by *operation of law* takes the husband's surname.'](https://casetext.com/case/forbush-v-wallace#:~:text=noting%20that%20Alabama%20has%20adopted%20the%20common%20law%20rule%20that%20upon%20marriage%20the%20wife%20by%20operation%20of%20law%20takes%20the%20husband%27s%20surname.) (Emphasis supplied.) It cites some early cases: [Roberts v. Grayson](https://casetext.com/case/roberts-v-grayson), [233 Ala. 658, 660](https://casetext.com/case/roberts-v-grayson#p660:~:text=a%20married%20woman%27s%20name%20consists%2C%20in%20law%2C%20of%20her%20own%20Christian%20name%20and%20her%20husband%27s%20surname.), [173 So. 38](https://casetext.com/case/roberts-v-grayson#:~:text=A%20married%20woman%20takes%20her%20husband%27s%20surname%2C%20and,the%20appellative%20abbreviation%20%27Mrs.%27%20prefixed%20to%20the%20surname%3B) (1937); [Bentley v. State, 37 Ala. App](https://casetext.com/case/bentley-v-state-63/). 463, 465, 70 So.2d 430 (1954). Such may well be the common law as construed by the Alabama courts, however, after reviewing the extensive authorities on the subject, we conclude that the common law of England on July 4, 1776, did not by operation of law engraft the husband's surname upon the wife. In Florida there is not statute or judicial decision requiring a woman to take her husband's surname upon marriage. Although it is the general custom for a woman to change her name upon marriage to that of the husband, the law does not compel her to do so.]")]
+sy[grepl("Flo", state) & grepl("Hoop", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-hooper-2#p403:~:text=The%20right%20of%20a%20woman) The right of a woman to her birth-given name, notwithstanding marriage, is established under Florida law. See Marshall v. State, [301 So.2d 477](https://casetext.com/case/marshall-v-state-133) (Fla. 1st DCA 1974); Davis v. Roos, [326 So.2d 226](https://casetext.com/case/davis-v-roos) (Fla. 3d DCA 1976). See also Egner v. Egner, [133 N.J. Super. 403](https://casetext.com/case/egner-v-egner-3), [337 A.2d 46](https://casetext.com/case/egner-v-egner-3) (N.J. 1975). ]")]
+sy[grepl("Ge", state) & grepl("Att", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://commonlaw.name/GA-AG-Opinion-75-49.pdf) it is my official opinion that a married woman's surname is that of her husband but that she may change her name for all legal purposes, including issuance of a driver's license, by judicial decree or by consistent usage of another name without resort to judicial proceedings.]")]
+sy[grepl("Ha", state) & grepl("Stat", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/federal/district-courts/FSupp/466/714/2360834/#:~:text=adopted%20in%201860.-,Until%201975%2C,-it%20was%20required) Until 1975, it was required that every married woman shall adopt her husband's name as a 'family name.' H.R.S. § 574-1 (1968). This was changed in 1975 to allow a wife to retain her maiden name, or a husband to take his wife's surname, or either party to choose a hyphenated combination of both surnames, in either order. L.1975, ch. 114, § 1.]")]
+sy[grepl("Ill", state) & grepl("695", ref.M), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://ag.state.il.us/opinions/1974/S-695.pdf) It should be noted that in Illinois there is no statute which requires a woman to adopt assume, or change her own name to her husband's surname upon marriage. ]")]
+sy[grepl("Ill", state) & grepl("711", ref.M), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://ag.state.il.us/opinions/1974/S-711.pdf) if a woman upon marriage does not assume her husband's surname but retains her maiden name, she is not required to notify the Secretary of State. ]")]
+sy[grepl("Ind", state) & grepl("Hau", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-hauptly)  A woman has a common law right to do business in a name other than her married name. ...  a person may change his name at will without any legal proceedings by merely adopting another name. The mere speculation by the State that the appellant's decision to change her name might cause embarrassment to her child was not sufficient to justify the trial court's denial of the appellant's petition for a name change.]")]
+sy[grepl("Io", state) & grepl("1980", ref.M), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://www.legis.iowa.gov/docs/publications/AGO/1043259.pdf) This is about hyphened names which the Assistant Attorney General concurs to. ]")]
+sy[grepl("Jer", state) & grepl("Lawre", case), ref.M := 
+  paste(ref.M, "[[Seiro added:]() Plaintiff appeals from the denial of her application for a change of name under N.J.S.A. 2A:52-1 from her married to her maiden name...(snip)... The trial judge, in an opinion published in 128 N.J. Super. 312 (Law Div. 1974), concluded: This court has great concern for the stability of the family and the marriage relationship. ...(snip)...  an abuse of the trial judge's discretion. Reversed and remanded for entry of judgment in accordance herewith. ]")]
+sy[grepl("Mai", state) & grepl("Reben", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/maine/supreme-court/1975/342-a-2d-688-0.html) the appellant first alleges that she has a right under the common law to choose any name she wishes, unless motivated by a fraudulent purpose, and that as the Judge of Probate found no fraudulent purpose, his denial of her petition was an abuse of discretion. ... (snip) ... We sustain her appeal. ... (snip) ... This opinion, also, will leave many questions unanswered, foremost, probably, the question whether a woman takes the surname of her husband at marriage by operation of law. Traditionally this has been the almost unanimous practice in this state, yet no statute has required it and no decision of this Court has ever affirmed it as being mandated by the common law.]")]
+sy[grepl("Mary", state) & grepl("Klein", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/klein-v-klein-114#:~:text=Q.%20144%20(1958).-,That%20Maryland,-follows%20the%20common) That Maryland follows the common law with respect to a name change is no longer open to question. Hardy v. Hardy, 269 Md. 412, 306 A.2d 244 (1973); Stuart v. Board of Supervisors, 266 Md. 440, 295 A.2d 223 (1972); Romans v. State, 178 Md. 588, 16 A.2d 642 (1940); Hall v. Hall, supra. ...(snip)... We hold that it is an abuse of discretion to deny a woman who requests it at the time of divorce the restoration of her prenuptial name, absent illegal, fraudulent, or immoral purposes.]")]
+####sy <- rbind(sy, data.table(state = "Maryland", year.M = 1972, case = "Stuart v Board of Elections", 
+####  ref.M = "266 Md. 440, 295 A.2d 223 (Md. 1972) [[This case is added by Seiro:](https://casetext.com/case/stuart-v-board-of-elections#:~:text=a%20woman%20may%20retain%20her%20birth%20name%20after%20marriage) ... a woman may retain her birth name after marriage merely by consistently and nonfraudulently using it.]"), use.names = T, fill = T)
+sy[grepl("Mary", state) & grepl("Stu.*Boa", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/stuart-v-board-of-elections#:~:text=a%20woman%20may%20retain%20her%20birth%20name%20after%20marriage) a woman may retain her birth name after marriage merely by consistently and nonfraudulently using it.]")]
+sy[grepl("Mass", state) & grepl("Lowe", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/massachusetts/supreme-court/1977/373-mass-178-2.html) In 1974 the Attorney General issued three opinions with respect to the recording and use of names. Rep. A.G., Pub. Doc. No. 12, at 105 (1974). Rep. A.G., Pub. Doc. No. 12, at 48 (1974). Rep. A.G., Pub. Doc. No. 12, at 72 (1974). Those opinions asserted and elaborated a common law principle that people may select or change their names freely if there is no fraudulent intent. The defendants, city and town clerks, refused to follow those opinions ...(snip)... We hold that the Attorney General is right and the city and town clerks are wrong, and order that the rights of the parties be declared accordingly. ...(snip)... A woman, regardless of her marital status, may change her name at will, without resorting to legal proceedings, provided it is done for an honest purpose. [187-189]]")]
+sy[grepl("Michi", state) & grepl("Pio", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/piotrowski-v-piotrowski#:~:text=There%20is%20no%20requirement) There is no requirement that any person go through the courts to establish a legal change of name. ...(snip)... The circumstance that there is a minor child is not enough to support denial of the request. ...(znip)... Reversed and remanded for a decree to restore to plaintiff her maiden name. ]")]
+sy[grepl("Miss", state) & grepl("Natale", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/missouri/court-of-appeals/1975/35880-0.html) On August 21, 1973, the court entered its order and judgment denying the Petition for Change of Name on the ground that 'Petitioner is lawfully married and resides with her legal spouse' and 'that under such circumstances the granting of said petition could be detrimental to others in the future.' The court's order did not specify who the 'others' were, but at the hearing, the court had commented, 'Where a married couple who do have and in the future are likely to have many obligations for which they are liable, I can see circumstances that would be detrimental . . .' It appears, therefore, that the trial court found that the fact of a woman's ongoing marriage is prima facie evidence of detriment to creditors sufficient to deny her petition for change of name. ...(snip)... Our research had disclosed no appellate decision in any state which affirmed the trial court's denial of a married woman's name change petition on the ground of an ongoing marriage. Petition of Hauptly, 312 N.E.2d 857 (Ind.1974); Marshall v. State, 301 So. 2d 477 (Fla.App.1974); Application of Halligan, 46 A.D.2d 170, 361 N.Y.S.2d 458 (1974); Application of Lawrence, 133 N.J.Super. 408, 337 A.2d 49 (Super.Ct.App. Div.1975). ...(snip)... The judgment is reversed and the trial court directed to issue its order changing petitioner's name as prayed. ]")]
+sy[grepl("Neb", state) & grepl("Simm", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/nebraska/supreme-court/1978/41739-1.html) District Court denying a decree of dissolution. We reverse and remand with directions. The sole and only issue is whether the District Court erred in refusing to grant a decree of dissolution on the ground that it lacked jurisdiction because of the form of name used in the petition for dissolution. ...(snip)... At common law a married woman could legally bear a different name from her husband. The King v. The Inhabitants of St. Faith's Newton (1823), 3 Dowling & Ryland's Reports 348, Kruzel v. Podell, 67 Wis.2d 138, 226 N.W.2d 458.]")]
+sy[grepl("New Hamp", state) & grepl("Mosk", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/moskowitz-v-moskowitz-12) The court affirms its prior decree wherein it found as a fact that it would not be in the best interest of the family unit to permit said change of name. The recommendation was approved by Perkins, J (of probate court, added by seiro). ...(snip)... We (NH Supreme Court, added by Seiro) do not suggest that every petition for a change of name be granted, but rather hold that some substantial reason must exist for denying such a petition. The mere fact that there are children is not sufficient ground. ...(snip)... Remanded.]")]
+sy[grepl("New Yor", state) & grepl("Halli", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/matter-of-halligan-3) [Supreme Court's requirement](https://casetext.com/case/matter-of-halligan) that petitioner show 'a compelling reason' for the change, improperly imposed a burden of persuasion upon her beyond that required by the statute. ...(snip)... The order should be reversed and the petition granted.]")]
+sy[grepl("N.*Car", state) & grepl("Moh", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-mohlman-1) Court of Appeals denied the petition of a married woman to use her maiden name. ..(snip)... To the extent that the court (of appeals), in denying relief and dismissing the petition, based its action upon its finding that the relief sought is unnecessary, it did so erroneously. ]")]
+sy[grepl("N.?Ca", state) & grepl("Brie", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://law.justia.com/cases/federal/district-courts/FSupp/523/494/2298931/) North Carolina General Statute § 130-50(e) be, and the same is hereby adjudged and declared void and of no force or effect insofar as it precludes plaintiffs from recording the surnames of their choice on the birth certificates of their children called for under N.C.G.S. § 130-50(e). ]")]
+sy[grepl("N.*Ca", state) & grepl("Brie", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/obrien-v-tilson#:~:text=3.-,North%20Carolina%20General%20Statute%20%C2%A7%20130%2D50(e),-be%2C%20and%20the)  North Carolina General Statute § 130-50(e) be, and the same is hereby adjudged and declared void and of no force or effect insofar as it precludes plaintiffs from recording the surnames of their choice on the birth certificates of their children called for under N.C.G.S. § 130-50(e).]")]
+sy[grepl("Ok", state) & grepl("Op", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/sneed-v-sneed-3?__cf_chl_tk=GALYvgWoul0U8HLvqPk5QbPn60Y1sB6pkdTFKkYbyAg-1703388077-0-gaNycGzNFVA) [*Opinion No. 75-281 (1975)*, AG (Ops.Okla.Atty.Gen. Nov. 14, 1975)](https://casetext.com/case/opinion-no-25001?sort=relevance&resultsNav=false&q=#:~:text=(Okl.%201971).-,A%20few%20courts,-have%20enunciated%20a) ... permit a married woman to retain her maiden surname, or to assume her husband’s surname and retain all or as much of her maiden name as she chooses.]")]
+sy[grepl("Ok", state) & grepl("Snee", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/sneed-v-sneed-3?__cf_chl_tk=GALYvgWoul0U8HLvqPk5QbPn60Y1sB6pkdTFKkYbyAg-1703388077-0-gaNycGzNFVA) the trial court refused to restore Mrs. Sneed's maiden name because she had a minor child ...(snip)... At common law a married woman was not compelled to adopt her husband's surname. ... (snip)... Reversed and remanded with directions.]")]
+sy[grepl("Oh", state) & grepl("Ball", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/ball-v-brown) n Ball v. Brown, 450 F. Supp. 4, 10 (N.D.Ohio 1977), an Ohio statute requiring automatic cancellation of a woman's registration form following a change in marital status was found to violate the federal voting rights statute, 42 U.S.C. § 1971.]")]
+sy[grepl("Rh", state) & grepl("Tra", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/traugott-v-petit) Woman appealed from a judgment of the Superior Court, Providence and Bristol County, Needham, J., which decreed, *inter alia*, that married women who wished to register a motor vehicle or apply for operator's license must use their Christian names followed by their husband's surnames. Appeal sustained; judgment reversed; case remanded.]")]
+sy[grepl("^Vir", state) & grepl("Strik", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-strikwerda-and-antell#:~:text=should%20be%20granted.-,Since,-husband%20supports%20wife%27s) Since husband supports wife's petition, there is little likelihood that name change would have disruptive effect on the family, and it was abuse of discretion to deny petition after finding that it was not filed for illegal, fraudulent or immoral purpose. ...(snip)... Reversed and remanded.]")]
+sy[grepl("^Vir", state) & grepl("Mill", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-change-of-name-of-miller#:~:text=and%20Compton%2C%20JJ.-,Married,-woman%20entitled%20to) Married woman entitled to resume maiden name under common law as applied to petitions under Code Sec. 8-577.1 (now with changes Sec. 8.01-217).]")]
+sy[grepl("Was", state) & grepl("Doe", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/doe-v-dunning#:~:text=the%20court%20saw-,%22no,-legal%20impediment%20which) no legal impediment which would prevent married parents from giving the child the mother's surname.]")]
+sy[grepl("Wis", state) & grepl("Kru", case), ref.M := 
+  paste(ref.M, "[[Seiro added:](https://casetext.com/case/in-re-petition-of-kruzel) the issue presented was 'whether upon marriage a woman is required by law to assume the surname of her husband.' ...(snip)... Since we conclude in this case that Kathleen Rose Harney was never compelled to change her name, nor did she ever in fact adopt the surname Kruzel by usage, her petition, although ostensibly brought under sec. 296.36, Stats. 1971, amounted only to a request for judicial recognition that she had been correct in using her maiden surname in the past.]")]
+
+#### adding cases
+sy <- rbind(sy, data.table(state = "New York", year.M = 1974, case = "Matter of Halligan", 
+   ref.M = "266 Md. 440, 295 A.2d 223 (Md. 1972) [[This case is added by Seiro:](https://casetext.com/case/matter-of-halligan-3/#:~:text=No%20reasonable%20objection%20appearing%2C%20appellant%20is%20entitled%20to%20her%20requested%20order%20declaring%20that%20she%20shall%20be%20known%20by%20her%20maiden%20name%20of%20Ryan%2C%20and%20no%20other.) Supreme Court's requirement that petitioner show 'a compelling reason' for the change, improperly imposed a burden of persuasion upon her beyond that required by the statute...No reasonable objection appearing, appellant is entitled to her requested order declaring that she shall be known by her maiden name of Ryan, and no other.]"), use.names = T, fill = T)
+sy <- rbind(sy, data.table(state = "South Dakota", year.M = 1975, case = "Ogle v. Cir. Ct., Tenth (Now 6th) Jud. Cir",
+  ref.M = "227 N.W.2d 621 (S.D. 1975) [[Seiro added:](https://casetext.com/case/ogle-v-cir-ct-tenth-now-6th-jud-cir#p21:~:text=of%20name.%20Consequently%2C-,we%20conclude,-that%20the%20trial) we conclude that the trial court abused its discretion in denying the petition without giving petitioner an opportunity to present further evidence.]"),
+  use.names = T, fill = T)
+sy <- rbind(sy, data.table(state = "Texas", year.M = 1974, case = "Op. Att'y Gen. H-432 (October 25, 1974) Re: Whether a woman is required to assume her husband's surname as her own",
+  ref.M = " [[Seiro added, page 4:](https://www.texasattorneygeneral.gov/sites/default/files/opinion-files/opinion/1974/jh0432.pdf) under this statute a woman retained her common law right to choose at marriage either to keep her name prior to marriage or to assume her husband's surname.]"), use.names = T, fill = T)
+```
+
+A table of all cases.
+```{r tabulate cases, results = "asis"}
+setkey(sy, state, year.A, year.M)
+sy <- sy[state != "" & (year.M >= 1972 |year.A >= 1972), .(state, case, year.A, year.M, ref.A, ref.M)]
+library(kableExtra)
+# all cases
+kbt <- kbl(sy, align = "lcccll", 
+  caption = "States with their first years in legal decisions : MacDougall and Augustine-Adams", 
+  format    = "latex", longtable = T, booktabs  = T)
+kbt  <- kable_styling(kbt, fixed_thead = T, full_width = F, position = "left")
+kbt <- row_spec(kbt, seq(1, nrow(sy), 2), background="lightgray")
+kbt <- column_spec(kbt, column = grep("case", colnames(sy)), width = "1.2cm")
+kbt <- column_spec(kbt, column = 1, width = "2cm")
+kbt <- column_spec(kbt, column = grep("year.A", colnames(sy)), width = "1.0cm")
+kbt <- column_spec(kbt, column = grep("year.M", colnames(sy)), width = "1.0cm")
+kbt <- column_spec(kbt, column = grep("ref.A", colnames(sy)), width = "5.5cm")
+kbt <- column_spec(kbt, column = grep("ref.M", colnames(sy)), width = "5.5cm")
+kable_styling(kbt, latex_options = c("repeat_header"),
+              repeat_header_continued = "\\textit{(Continued on next page...)}")
+```
+
+
+A table by matched (Augustine and MacDougall) results.
+```{r matches, results = "asis"}
+# matching cases
+sy1 <- sy[!is.na(year.M) & !is.na(year.A), .(state, year.M, case, ref.M)]
+kbt <- kbl(sy1, align = "rcll", 
+  caption = "States with their first years in legal decisions : Matching in MacDougall and Augustine-Adams", 
+  format    = "latex", longtable = T, booktabs  = T)
+####kbt  <- kable_styling(kbt, fixed_thead = T, full_width = F, position = "left")
+kbt <- row_spec(kbt, seq(1, nrow(sy1), 2), background="lightgray")
+kbt <- column_spec(kbt, column = 3, width = "2cm")
+kbt <- column_spec(kbt, column = 1, width = "2cm")
+kbt <- column_spec(kbt, column = 4, width = "10cm")
+kable_styling(kbt, latex_options = c("repeat_header"),
+              repeat_header_continued = "\\textit{(Continued on next page...)}")
+# only in MacDougall
+sy2 <- sy[!is.na(year.M) & is.na(year.A), .(state, year.M, case, ref.M)]
+kbt <- kbl(sy2, align = "rcll", 
+  caption = "States with their first years in legal decisions: Only in MacDougall", 
+  format    = "latex", longtable = T, booktabs  = T)
+kbt  <- kable_styling(kbt, fixed_thead = T, full_width = F, position = "left")
+kbt <- row_spec(kbt, seq(1, nrow(sy2), 2), background="lightgray")
+kbt <- column_spec(kbt, column = 3, width = "2cm")
+kbt <- column_spec(kbt, column = 1, width = "2cm")
+kbt <- column_spec(kbt, column = 4, width = "10cm")
+kable_styling(kbt, latex_options = c("repeat_header"),
+              repeat_header_continued = "\\textit{(Continued on next page...)}")
+# only in Augustine
+sy3 <- sy[is.na(year.M) & !is.na(year.A), .(state, year.A, case, ref.A)]
+kbt <- kbl(sy3, align = "rcll", 
+  caption = "States with their first years in legal decisions: Only in Augustine-Adams", 
+  format    = "latex", longtable = T, booktabs  = T)
+kbt  <- kable_styling(kbt, fixed_thead = T, full_width = F, position = "left")
+kbt <- row_spec(kbt, seq(1, nrow(sy3), 2), background="lightgray")
+kbt <- column_spec(kbt, column = 3, width = "3cm")
+kbt <- column_spec(kbt, column = 1, width = "2cm")
+kbt <- column_spec(kbt, column = 4, width = "10cm")
+kable_styling(kbt, latex_options = c("repeat_header"),
+              repeat_header_continued = "\\textit{(Continued on next page...)}")
+```
+
+## Examples of initial decisions by State
+
+In Arkansas case, the opinion of district attorney [indicated](https://law.justia.com/cases/federal/district-courts/FSupp/391/1395/1494569/#:~:text=According%20to%20the%20affidavit%20of%20Linda%20Scholle%20she%20first%20registered%20in%20May%2C%201973%20at%20a%20time%20when%20she%20was%20unmarried) that  
+
+> _It appears from the materials before us that the controversy arose in the late summer or early fall of 1974 ... and immediately &#42;1399 involved the plaintiffs, Walker and Scholle, who are both lawyers._  
+
+> _She (Scholle) married in April, 1974 and retained her  
+> maiden name; since she had not changed her name she  
+> did not undertake to have her registration changed to reflect  
+> her marriage._  
+
+### Positive
+
+In Californian case of *Weathers v Superior Court*, State Court of Appeals Judge notes the opinion: 
+
+> _It raises the issue of the right of a wife who during marriage used her maiden name to petition for a dissolution of marriage in that name rather than the surname of her husband. We conclude that the wife has the right so to file her petition._
+
+### Negative?
+
+It also states such right is not implemented universally. Pleading for a divorce in 1975, the acting judge [said](https://law.justia.com/cases/california/court-of-appeal/3d/54/286.html#:~:text=On%20July%2021,names%3B%20never%20have.%22):  
+
+
+> _On July 21, the petition was heard by Commissioner Russell R. Hermann sitting as a temporary judge of the court. Wife appeared in propria persona while Francisco Grippa made no appearance. Commissioner Hermann called the case as "Weathers versus Grippa." He asked wife if she had married Francisco Grippa. When wife answered that she had, the commissioner replied "All of your pleadings say 'Weathers versus Grippa.'" Informed by wife that she had at no time assumed Grippa's name, the commissioner replied, "That doesn't matter whether you have assumed it or not." Amplifying when wife responded that she had never used the Grippa name, the commissioner said, "The marriage certificate makes you Mrs. Grippa." When wife protested, "No, it doesn't," Commissioner Hermann responded, "They must have an awful novel wedding certificate in Oklahoma if it doesn't." Informed by wife that the marriage certificate simply read "Janet Lynn Weathers and Francisco Grippa," the commissioner replied, "I have never divorced people with two different names; never have."_  
+
+### Negative?
+
+In Florida's *Marshal v State* case, one judge, although concurring the decision, worries the distruction of family and leaves an opinion piece:  
+
+> _I think it important that we here note that we are not called upon to decide whether it is requisite that upon marriage a wife assume the surname of her husband. That issue is not before us._  
+
+### Negative
+
+In Indiana, *In re Hauptly* case, the judge's opinion reveals that the State Attorney General attacked the plaintiff who filed to use her maidenname as:
+
+> _"Perhaps she is claiming the woman's privilege that in an argument she does not have to use reason." (Page 6)_   
+
+> _"It can be reasonably inferred that she believes that fact that she is the breadwinner of the family should be publicized so that all will know her husband has been emasculated and that she is the head of the family." (Page 7)_  
+
+> _". . . indicating that perhaps Mrs. Hauply's need was not for a change of name but for a competent psychiatrist." (Pages 9 and 10)_  
+
+> _"Namely, a sick and confused woman, unhappy and unsatisfied with her marriage, unable to determine what she wants to do with her life." (Page 10)_  
+
+> _". . . because she was a kind of odd ball . . ." (Page 10)_  
+
+> _"[In filing a claim for hospitalization] the computer would probably fail to function and the company refuse to pay on the grounds that it was not liable for hospitalization of a mistress under the terms of a family policy." (Page 11)_  
+
+### Positive
+
+In Illinois case, Attorney General's opinion on early case states:  
+
+> _I do not believe that this appellate decision should control. The other Illinois decisions and cases elsewhere establish that a woman may in fact retain her own name upon marriage with or without court proceedings. (Ill. Op. Att'y Gen., February 13, 1974)._  
+
+## Tabulation of earliest year entries
+
+Here, I will tabulate the earliest year entries by State in MacDougall and Augustine tables:
+```{r earliest year, warning = F}
+ey <- sy[, 
+  .(yr.A = min(year.A, na.rm = T), yr.M = min(year.M, na.rm = T)), 
+  by = state]
+ey[, yr := min(c(yr.A, yr.M)), by = state]
+ey[yr.A == Inf, yr.A := NA]
+ey[yr.M == Inf, yr.M := NA]
+eytable <- ey[, .(State = paste(state, collapse = ", ")), by = yr]
+setkey(eytable, yr)
+```
+This will form a basis of event study estimation.
+
+
+```{r eytable, echo = F, full.width = F}
+library(kableExtra)
+kbt <- kbl(eytable, align = "cl", 
+  caption = "States with their first years in legal decisions", 
+  format    = "latex", longtable = T, booktabs  = T)
+kbt  <- kable_styling(kbt, fixed_thead = T, full_width = F, position = "left")
+kbt <- row_spec(kbt, seq(1, nrow(eytable), 2), background="lightgray")
+kbt <- column_spec(kbt, column = 2, width = "12cm")
+column_spec(kbt, column = 1, width = "2cm")
+```
+
+## A summary of affirmative arguments
+
+In this subsection, we show the logic of affirmative arguments on the woman's name rights. 
+
+@Kohout1973 discusses the conditions up to 1973. She notes name rights of women are not universally guaranteed. Some states, like New York, may allow name changes of a married woman after filing for it, but the court has a certain degree of discretion to deny the petition. The paper also hilights the *Forbush* case in which Alabama court suggested that the procedure should be simple and inexpensive.   
+
+The *Forbush* court (1971, Alabama) considers the equal protection under US Constitution (14th Ammendment) is not violated by denying a woman to use her maiden name while allowing a man to do so. The reason is the injury caused on a woman is minimal and allowed to persist when one considers merits of denial. The [court acknowledges that the plaintiff seeks to protect her civil rights](https://casetext.com/case/forbush-v-wallace#:~:text=plaintiff%20seeks%20to%20protect%20her%20civil%20rights.) but does not examine civil rights violation. Six years later, a federal case in *Allen v Lovejoy*  553 F2d 522 (6th Circuit Court 1977) decided that Title VII of Civil Rights Act of 1964 was violated when an employer suspended a female worker for her refusal to sign a form with post-marriage surname. 
+
+A common law interpretation of the matter, claimed by feminists [@Omi1997, p.261], is the following:
+
+* Each person has the right to use and to be known by the surname of his or her choice.  
+* Then, a woman to use husband's name just by using it, and similarly, to use her maiden name just by using it.  
+
+> _Despite the clarity of this argument, by misstating precedent  
+> and overemphasizing the frequency with which the change occurs,  
+> many courts and officials transformed womans's option of adopting  
+> her husband's surname into a legal requirement._  
+> `r quote_footer('--- Omi, 1997, p. 261')`
+
+
+Leissner (1997, p.262) lists that the *Forbush* court (Sep 28, 1971, Alabama) listed five state interests^[This reference is incorrect. The Forbush Court lists three: 1., 2., and 4. See the links in the quoted list of main text. 3. is linked to *People ex rel. Rago v. Lipsky* (Nov 6, 1945, Appellate Court of Illinois). The fifth justification is a summary by the author on the tendency of other State courts. The primary reference is an excerpt from *Petitioner's Brief* of 1972 Wisconsin case *In the matter of the establishment of the name of Pricilla Ruth Macdougall* (Dane County Circuit Court, Madison, Wis, 135463, 1972), although its original text is not available easily and scholars are re-citing the citation in Lamber (1973, p.805). The original text is not an academic document and may not have refered to particular Court decisions. ] that justify the restriction on women's name rights:
+
+1. [Custom and uniformity](https://casetext.com/case/forbush-v-wallace#:~:text=Certainly%20the%20custom%20of%20the%20husband%27s%20surname%20denominating%20the%20wedded%20couple%20is%20one%20of%20long%20standing.)^[Longevity cannot be a rationale. ]  
+1. [Administrative efficiency](https://casetext.com/case/forbush-v-wallace#:~:text=The%20administrative%20convenience)^[No administrative efficiency is gained by married women to change her surname upon marriage.]  
+1. [(Prevention of) Fraud](https://casetext.com/case/people-ex-rel-rago-v-lipsky#:~:text=it%20appears%20obvious%20that%20the%20provision%20was%20intended%20to%20prevent%20fraudulent%20duplication%20of%20registrations%2C)^[Common law name changes do not increase frauds. ]  
+1. [*De minimis* injury --- Existence of statutory remedies](https://casetext.com/case/forbush-v-wallace#:~:text=operation%20of%20the%20law%20is%20de%20minimis.)^[It is not a minimal cost to change a surname.]  
+1. Preservation of the family^[Not well understood empirically.]  
+
+In *State v Taylor*, the court acknowledged that the *Forbush*'s decision is [inaccurately representing the common law on names](https://casetext.com/case/state-v-taylor-832#:~:text=Forbush%20v.%20Wallace%20does%20not%20accurately%20state%20the%20common%20law%20on%20names).  
+
+@Daum1974 [pp.72-73] argues that while there is a move toward ensuring women's name rights, because there was no statute to deny or allow the women's name rights, the application of the right was inconsistent between the states.  
+
+
+**References**  
+

@@ -1,0 +1,166 @@
+%  path0 <- "c:/data/NameRight/"; setwd(path <- paste0(path0, "program/"));  system("recycle c:/data/NameRight/program/cache/ReadData/"); library(knitr); knit("ReadData.rnw", "ReadData.tex"); system("platex ReadData"); system("pbibtex ReadData"); system("dvipdfmx ReadData")
+
+\input{c:/migrate/R/knitrPreamble/knitr_preamble.rnw}
+\renewcommand\Routcolor{\color{gray30}}
+\makeatletter
+\g@addto@macro{\UrlBreaks}{\UrlOrds}
+\newcommand\gobblepars{%
+    \@ifnextchar\par%
+        {\expandafter\gobblepars\@gobble}%
+        {}}
+\makeatother
+\def\pgfsysdriver{pgfsys-dvipdfm.def}
+\usepackage{tikz}
+\usetikzlibrary{calc, arrows, decorations, decorations.pathreplacing, backgrounds}
+\usepackage{adjustbox}
+\usepackage{longtable}
+\usepackage{caption}
+\tikzstyle{toprow} =
+[
+top color = gray!20, bottom color = gray!50, thick
+]
+\tikzstyle{maintable} =
+[
+top color = blue!1, bottom color = blue!20, draw = white
+%top color = green!1, bottom color = green!20, draw = white
+]
+\tikzset{
+%Define standard arrow tip
+>=stealth',
+%Define style for different line styles
+help lines/.style={dashed, thick},
+axis/.style={<->},
+important line/.style={thick},
+connection/.style={thick, dotted},
+}
+
+
+\begin{document}
+\setlength{\baselineskip}{12pt}
+
+
+
+
+
+\hfil Read cleaned NBER files\\
+
+\hfil\MonthDY\\
+\hfil{\footnotesize\currenttime}\\
+\renewcommand{\thefootnote}{*\arabic{footnote}}
+
+\hfil Seiro Ito
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\setlength{\parindent}{1em}
+\vspace{2ex}
+
+
+\section{Read files}
+
+
+NHGIS (IPUMS) has marriage related data sets. 
+
+
+NBER has a project that compiled marriage data between 1968-1988 {\footnotesize (\url{https://www.nber.org/research/data/marriage-and-divorce-data-1968-1995-0})}.
+
+
+
+Create state names in divorce and marriage data with a reference to marr88.pdf. \textsf{StNum} in usst data is \textsf{state} in divorce data.
+
+
+\subsection{Plots}
+
+
+
+
+\mpage{\textwidth}{
+\hfil\textsc{Figure \refstepcounter{figure}\thefigure: Number of marriages by state (NBER)\label{NBER marriage}}\\
+\hfil\includegraphics[width=12cm]{c:/data/NameRight/save/NumberOfMarriagesByState.pdf}
+}
+
+\mpage{\textwidth}{
+\hfil\textsc{Figure \refstepcounter{figure}\thefigure: Number of divorces by state (NBER)\label{NBER marriage}}\\
+\hfil\includegraphics[width=12cm]{c:/data/NameRight/save/NumberOfDivorcesByState.pdf}
+}
+
+
+\section{Legal cases and political activities}
+
+
+By 1971, Department of State's position: ``[t]he legal name of a married woman is her husband's surname.'' In addition, to quote from \textit{Walker v. Jackson}, 391 F. Supp. 1395 (E.D. Ark. 1975), 
+\begin{quotation}
+[T]he Supreme Court of the United States has recognized that a State may constitutionally require a married woman to use her husband's surname as her own for certain purposes, as for example obtaining a driver's license, if the State has a sufficiently compelling interest in imposing the requirement. \textit{Forbush v. Wallace}, Governor, 405 U.S. 970, 92 S. Ct. 1197, 31 L. Ed. 2d 246 (1972), aff'g without opinion, \textit{Forbush v. Wallace}, Governor, 341 F. Supp. 217 (M.D.Ala.1971).
+\end{quotation}
+Such a position in public offices have slowly changed. According to \citet[][p.6]{Augustine1997}, legal challenges in the 1970's ``firmly establised that ... her name is unchanged by the fact that marriage had occurred.'' ``By the late 1970's and early 1980's many state legislatures codified a woman's right to name herself.'' 
+
+The leading case was \textit{Dunn v. Palermo} in Tennessee (1975) that the State Supreme Court affirmed that women can register to vote under her maiden names. Additionally, in 1976, Florida District Court of Appeals noted that women are not compelled to change her name upon marriage (\textit{Marshall v. State}). Another leading case that recognizes the women's right to name is in Nebraska in 1978 (\textit{Simmons v. O'Brien}). In this case, the woman retained her former surnames during the marriage, then filed a divorce (marriage dissolution) to which the District Court denied the appeal because she did not file under husband's surname. The Trial Court reversed the District Court's decision and remanded with directions to accept the filing.
+
+Other scholar notes that a 1973 case in Maryland (\textit{Stuart v. Bd. of Supervisors of Elections for Howard County}) served as a guide, and a 1975 decision in Wisconsin (\textit{Kruzel v. Podell}) played a pivotal role across the US \citep[][fn 4]{MacDougall1985}. \textsc{Table \ref{TabMFn9}} lists all the formal cases and informal opinions by state judicial or state attorney generals affirming the right after 1972. In principle, one can date the year when the official common law practice shifted to affirm the right.\footnote{\href{https://law.justia.com/cases/federal/district-courts/FSupp/406/359/2143469/}{\textit{Allen v. Lovejoy}}, concluded in October 1975, however, notes that a woman who was suspended without pay due to noncompliance with Health Department's name change policy should not get compensation because she did not follow Department's advice to first change the name and appeal to the internal Merit System Council. Given the uncertainty of how MSC might have responded to plaintiff's appeal, the women's name right had not been fully protected until 1974 when the suspension was decided. } 
+
+
+Following is a summary of political activities that promote women's name rights \citep[][fn 5]{MacDougall1985}: 
+\begin{itemize}
+\vspace{1.0ex}\setlength{\itemsep}{1.0ex}\setlength{\baselineskip}{12pt}
+\item	The Center for a Woman's Own Name was established in 1973 after \textit{Kruzel v. Podell} case was appealed, and started distributing \textit{Booklet For Women Who Wish To Determine Their Own Names After Marriage}. 
+\item	In 1974, Olympia Brown League was formed to aid women in Milwaukee affected by the lower court's ruling. In 1972, Massachusetts women formed Name-Change at the time of \textit{Forbush} case\footnote{\textit{Forbush v. Wallace} (1972): A supreme court case that conceded that a woman's legal name is her husband's name. }. They also distributed a booklet titled \textit{Fact Sheet For Women Who Wish To Retain Their Own Name After Marriage}. 
+\item	In 1973, \textit{the Committee To Encourage Richard H. Austin To Give Michigan Women Their Middle Names For The Holidays (CERHA)} was formed with Attorney Jean L. King to support the right of women to obtain drivers' licenses using their birth names as middle names. 
+\item	In California, \textit{the Name Choice Center} distributed a fact sheet and promoted the issue with the Attorney General and the Legislature. The Center had a mailing list of over 15,000 by 1974. 
+\item	In 1974, \textit{The Women's Legal Defense Fund} in Washington, D.C. established a committee
+on names which published and distributed a booklet on women's names for D.C. area residents. 
+\end{itemize}
+
+
+\begin{Schunk}
+\begin{Soutput}
+   state          case                            reference year
+1: Texas Rice v. State 37 Tex. Crim. 36, 38 S.W. 801 (1897) 1897
+\end{Soutput}
+\end{Schunk}
+
+
+
+
+\setcounter{table}{0}
+\hfil\textsc{Table \refstepcounter{table}\thetable: References in \citet{Augustine1997}}\label{TabAFn18}\\
+\setlength{\tabcolsep}{1pt}
+\hfil\input{c:/data/NameRight/save/Augustine1997Fn18.tex}
+
+
+\hfil\textsc{Table \refstepcounter{table}\thetable: References in \citet{MacDougall1985}}\label{TabMFn9}\\
+\setlength{\tabcolsep}{1pt}
+\hfil\input{c:/data/NameRight/save/MacDougall1985Fn9.tex}
+
+
+{\textsc{Table \ref{TabMFn9}} lists official opinions of judiciary on women's name right shown in \citet[][fn 9]{MacDougall1985}. The six states not listed, Colorado, Idaho, Nevada, New Mexico, Utah, and Wyoming, all recognize the right but have not circulated the opinions by 1985. State level recognition of women's name right led to a federal level concensus in 1982 that women should not be denied to open financial accounts under her birth-given surname as an interpretation of Equal Opportunity Credit Act [\href{https://www.ecfr.gov/current/title-12/chapter-II/subchapter-A/part-202/section-202.7#p-202.7(b)}{12 C.F.R. \textsection 202.7 (b) Designation of names}]. 
+
+According to \citet[][p.8]{Augustine1997}, state legal codes have been ammended that a married woman has a right to retain her maiden name.\footnote{Louisiana is unique that it takes a civil law perspective that ``[m]arriage does not change the name of either spouse'' \citep[][p.8]{Augustine1997}. }
+
+
+
+
+\hfil\begin{tabular}{
+>{\hfill\footnotesize}p{1.2cm}<{}
+>{\hfill\footnotesize}p{2cm}<{}
+>{\hfil\footnotesize}p{5cm}<{}
+}
+\rowcolor{lightblue}
+\makebox[1.2cm]{\hfil Year} & \makebox[2cm]{\hfil State} &  Law\\
+1997 & Georgia & GA Code Annex 19-3-33.1\\
+1996  & Guam & Code 3018-3109\\
+1996  & Iowa & Code Annex 595.5\\
+1995 & North Dakota & Cent. Code 14-03-20.1 \\
+1995 & Oregon & Revised Statute 106.220 \\
+1993  & Hawaii & Revised Statute 574-1\\
+1993  & Massachusetts & General Law Annex Chapter 46, 1D
+\end{tabular}
+
+
+{\footnotesize\bibliographystyle{aer}
+\setlength{\baselineskip}{8pt}
+\bibliography{c:/seiro/settings/TeX/seiro}
+}
+
+\end{document}
+

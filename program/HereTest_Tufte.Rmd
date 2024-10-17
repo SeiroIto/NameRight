@@ -1,0 +1,202 @@
+---
+title: "A test of here/rprojroot"
+author: "Seiro Ito"
+date: "`r format(Sys.time(), '%Y年%m月%d日 %R')`"
+output:
+  tufte::tufte_html:
+    citation_package: natbib
+    toc: true
+  pdf_document:
+     latex_engine: xelatex
+     fig_width: 7
+     fig_height: 6
+     fig_caption: true
+header-includes:
+    - \usepackage{amsmath}
+    - \usepackage{amssymb}
+    - \usepackage{amsfonts}
+    - \usepackage{bookmark} 
+    - \usepackage{natbib} 
+    - \usepackage{xltxtra} 
+    - \usepackage{zxjatype} 
+    - \usepackage[ipa]{zxjafont} 
+    - \usepackage{marginnote}
+bibliography: c:/seiro/settings/Tex/seiro.bib
+link-citations: yes
+#### c:\seiro\languages\R\R-4.2.1\bin\x64\Rscript.exe -e "path <- 'c:/data/NameRight/program/'; rmarkdown::render('c:/data/NameRight/program/HereTest_Tufte.Rmd')"
+# path <- "c:/data/NameRight/"; rmarkdown::render(paste0(path, "program/HereTest_Tufte.Rmd"))
+#### rmarkdown::render(paste0(path, "program/HereTest_Tufte.Rmd"), output_format = "pdf_document")
+#### cd c:/data/NameRight/
+#### git init
+#### git config --global user.name "SeiroIto"
+#### git remote add origin https://github.com/SeiroIto/NameRight.git  ## specify remote
+#### git add c:/data/NameRight/program c:/data/NameRight/save   ## this adds 
+#### git rm --cached -r c:/data/NameRight/source/  ## untrack files in source folder
+#### git rm --cached -r c:/data/NameRight/program/clubSandwich-main/
+#### git rm --cached -r c:/data/NameRight/program/cached/
+#### git rm --cached -r c:/data/NameRight/save/*.qs
+#### git rm --cached -r c:/data/NameRight/save/*.prn
+#### git commit -am "initial commit"
+#### git ls-tree -r main --name-only ## list all tracked files
+#### git push -f origin main  ## push files to remote
+#### if error with push fatal: the remote end hung up unexpectedly, run below
+#### git config http.postBuffer 2000000000
+#### git push -f origin main  ## push files to remote
+---
+<!-- Using 2 byte characters causes an error in dynamic deploy in Jekylle via git push. knitting works fine.
+Error reading file /github/workspace/program0/HereTest_Tufte.Rnw: invalid byte sequence in UTF-8 
+-->
+```{css css for code background color, echo=F}
+.SeiroBenign {
+  background-color: #FFEBCD;
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+.SeiroLightGreen {
+  background-color: #D0F0C0; /* Tea green */
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  font-family: Noto S	ans;
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+```
+```{r setup, include=FALSE} 
+#### include = F <==> echo=F & results = F
+library(tufte)
+#### invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'), 
+  margin_references = TRUE,
+  # remove leading hashes in html output
+  comment = "", class.source = "SeiroBenign", class.output = "SeiroLightGreen")
+options(htmltools.dir.version = FALSE)
+```
+
+## TL;DR: Tentative conclusion: `rprojroot` is worthy when working as a team in a batch command.
+
+I am running rmarkdown from the R program folder. But rmarkdown sets wd as the folder of the rmd file.
+```{r wd}
+getwd()
+```
+I usually use `setwd` to reorient the root for the project. 
+
+`here` can do so with a reference to *this* file (HereTest_Tufte.Rmd) which is sitting in the program subfolder of the project root.  
+```{r here}
+here::i_am("HereTest_Tufte.Rmd")
+getwd()
+```
+Below is folder structure:  
+
+..  
+├ program  
+ | └ HereTest_Tufte.Rmd  
+├ source  
+&emsp;    ├ USStateAbbreviation.prn  
+&emsp;    └ CDC-NCHS  
+&emsp;&emsp;      └ divorce.prn  
+
+```{r read file in source folder}
+library(here)
+dfile <- here("source", "USStateAbbreviation.prn")
+dfile
+```
+Trying to read this file causes an error: ...does not exist or is non-readable.  
+Use a low level function in `rprojroot` package to reorient the root. This is done by specifying the root-finding criteria.
+```{r reorient using has file}
+library(rprojroot)
+#### Specify a path/to/file relative to the root
+find_root_file("source", "USStateAbbreviation.prn", criterion = has_file(".here"))
+```
+This works because I have manually put .here file in the root.  
+
+Criteria: A git subfolder and index can be more convenient than manually placing .here file in the root, because I always have a git subfolder in a project.
+```{r reorient root2}
+find_root_file("source", "USStateAbbreviation.prn", criterion = has_file(".git/index"))
+(RootFile <- find_root(has_file(".git/index")))
+#### List all files and directories below the root
+dir(find_root(has_file(".git/index")))
+```
+I do not understand why `here()` cannot find the correct root when `has_file` can.  
+```{r }
+here()
+```
+I can define a relative path function to access files in any subfolder of the root, after hard wiring the root-finding criterion with `criterion = has_file(".git/index")`.  
+
+* But what is the merit of this relative to using `setwd`?  
+* I still cannot read files on the console (copy-paste) with `find_root_file` because R is running from R program folder, so it looks for RProgramFolder/source/FileName. `rprojroot` does not resolve this in console.   
+* `r kableExtra::text_spec("Unless I start R from the project (sub) folder, rprojroot is useless in console.", color = "red")` Doing so is a pain. Otherwise, regardless of using or not using `rprojroot`, if I ever want to use a console, I need set wd path with `setwd` so console R can find the files.  
+* All I needed to do was to redefine `setwd` while this way redefines the criterion after making sure git subfolder/.here file exists ...  
+* `rprojroot` works beautifully in a batch command.  
+
+Let us hear from the proponent on the merits. To quote from [Jenny Brian:](https://www.tidyverse.org/blog/2017/12/workflow-vs-script/#:~:text=such%20as%20these.-,What%E2%80%99s%20wrong%20with,%3F,-I%20run%20a)  
+
+> _It’s also unlikely to work for the author one or two years or computers from now. The project is not self-contained and portable._  
+
+Sensible. My folder structure can change. I mean, I need to allow their changes in the future to best suit the conditions in the future. (But I can stick with c:/data rule indefinitely with low costs...)  
+
+Another quote from [Jenny Brian](https://www.tidyverse.org/blog/2017/12/workflow-vs-script/#:~:text=To%20recreate%20and,computer%20on%20fire.) when talking about grading students submitting R scripts:  
+
+> _To recreate and perhaps extend this plot, the lucky recipient will need to hand edit one or more paths to reflect where the project has landed on their machine. When you do this for the 73rd time in 2 days, while marking an assignment, you start to fantasize about lighting the perpetrator’s computer on fire._
+
+A-ha! This is more for the grading tasks! It does make a very good sense to use `rprojroot` in them. Her words of wisdom includes:  
+
+> _Whenever you work on this project, launch the R process from the project’s top-level directory. If you launch R from the shell, cd to the correct folder first._
+
+So it is most convenient to have a shortcut to R in each project root. Then, do we need `rprojroot` at all???  
+
+One (big) merit is when I work in a team:  
+
+* Root can be different between team members.  
+* If all members have a git subfolder (say) in root, then <span style="color:red">no adjustment in root nor the use of `setwd` off the shared code is needed</span> for everyone.  
+* This translates to "no show of absolute path" in the code or its outputs.  
+
+But I never work with others using git!  
+
+* Yeah, I can do this just in case I work with others in the future...
+```{r }
+FPath <- function(SubFolder, FileName) 
+  find_root_file(SubFolder, FileName, criterion = has_file(".git/index"))
+FPath("source", "USStateAbbreviation.prn")
+FPath(c("source", "CDC-NCHS"), "divorce.prn") #### This does not work.
+FPath("source/CDC-NCHS", "divorce.prn")
+fread(FPath("source", "USStateAbbreviation.prn"))[1:10, ]
+```
+
+
+```{r option setting 2, eval = T, echo = F, warning = F, results = "hide"}
+knitr::opts_knit$set(base.dir = path)
+knitr::opts_chunk$set(
+  fig.path="/program/figure/", 
+  cache.path="/program/cache/ReadData", 
+  cache = FALSE, echo = TRUE, results = "markup", 
+  tidy.opts=list(blank=FALSE, width.cutoff=40))
+options(digits = 6, width = 80)
+library(data.table)
+library(qs)
+pathprogram <- paste0(path, "program/");  
+pathsource <- paste0(path, "source/")
+pathsave <- paste0(path, "save/")
+pathfigure <- paste0(pathprogram, "figure/")
+pathsavefigure <- paste0(pathsave, "figure/")
+dir.create(pathsave)
+dir.create(pathsavefigure)
+source("c:/seiro/settings/Rsetting/panel_estimator_functions.R")
+source("c:/seiro/settings/Rsetting/functions.R")
+source(paste0(pathprogram, "tabulate_est_IPUMS.R"))
+```
+
+
+
+
+
+```{r bib, include=FALSE}
+#### create a bib file for the R packages used in this document
+knitr::write_bib(x = "rmarkdown", file = paste0(path, 'seiro.bib'))
+```
+
+<script>
+  $(".toggle").click(function() {
+    $(this).toggleClass("open");
+  });
+</script>
+

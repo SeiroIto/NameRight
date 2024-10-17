@@ -1,0 +1,510 @@
+%  path0 <- "c:/data/NameRight/"; setwd(path <- paste0(path0, "program/"));  system("recycle c:/data/NameRight/program/cache/ReadData/"); library(knitr); knit("ReadData.rnw", "ReadData.tex"); system("platex ReadData"); system("pbibtex ReadData"); system("dvipdfmx ReadData")
+
+\input{c:/migrate/R/knitrPreamble/knitr_preamble.rnw}
+\renewcommand\Routcolor{\color{gray30}}
+\makeatletter
+\g@addto@macro{\UrlBreaks}{\UrlOrds}
+\newcommand\gobblepars{%
+    \@ifnextchar\par%
+        {\expandafter\gobblepars\@gobble}%
+        {}}
+\makeatother
+\def\pgfsysdriver{pgfsys-dvipdfm.def}
+\usepackage{tikz}
+\usetikzlibrary{calc, arrows, decorations, decorations.pathreplacing, backgrounds}
+\usepackage{adjustbox}
+\usepackage{longtable}
+\usepackage{caption}
+\tikzstyle{toprow} =
+[
+top color = gray!20, bottom color = gray!50, thick
+]
+\tikzstyle{maintable} =
+[
+top color = blue!1, bottom color = blue!20, draw = white
+%top color = green!1, bottom color = green!20, draw = white
+]
+\tikzset{
+%Define standard arrow tip
+>=stealth',
+%Define style for different line styles
+help lines/.style={dashed, thick},
+axis/.style={<->},
+important line/.style={thick},
+connection/.style={thick, dotted},
+}
+
+
+\begin{document}
+\setlength{\baselineskip}{12pt}
+
+<<option setting 1, cache = F, child='c:/migrate/R/knitrPreamble/knitr_initial_option_setting_chunk.rnw'>>=
+<<option setting 2, cache = F, warning = F>>=
+opts_knit$set(base.dir = 'c:/data/NameRight/analysis/program/')
+opts_chunk$set(fig.path='figure/ReadData', cache.path='cache/ReadData', 
+cache = F, echo = F, results = 'markup', 
+tidy.opts=list(blank=FALSE, width.cutoff=40))
+options(digits = 6, width = 80)
+library(data.table)
+pathsource <- paste0(path0, "source/")
+pathsave <- paste0(path0, "save/")
+dir.create(pathsave)
+source("c:/seiro/settings/Rsetting/panel_estimator_functions.R")
+# source("c:/seiro/settings/Rsetting/functions.R")
+source(paste0(path, "tabulate_est_IPUMS.R"))
+@
+
+\hfil Read cleaned NBER files\\
+
+\hfil\MonthDY\\
+\hfil{\footnotesize\currenttime}\\
+\renewcommand{\thefootnote}{*\arabic{footnote}}
+
+\hfil Seiro Ito
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\setlength{\parindent}{1em}
+\vspace{2ex}
+
+
+\section{Read files}
+
+
+NHGIS (IPUMS) has marriage related data sets. 
+<<list IPUMS file names and read, eval = F>>=
+foldername <- list.dirs(path = pathsource, recursive = T, full.names = T)
+fn <- unique(list.files(path = foldername, pattern = ".csv$", recursive = T, full.names = T))
+fnd <- gsub("^.*000\\d_", "", fn)
+#There will be warnings due to duplicated factor levels in dta which should be a fair warning but suppress them. 
+Z0 <- lapply(fn, fread)
+Z0 <- lapply(Z0, function(x) x[-1, ])
+Z0 <- lapply(Z0, function(x) setnames(x, colnames(x), tolower(colnames(x))))
+lapply(1:length(Z0), function(i) fwrite(Z0[[i]], paste0(pathsave, "Z", i, ".prn"), sep = "\t", quote=F))
+Z <- lapply(1:length(Z0), function(i) fread(paste0(pathsave, "Z", i, ".prn")))
+rm(Z0)
+lapply(Z, function(x) {
+faccols <- grepout("^state$|^county$|^name$|cty_sub$|gis", colnames(x))
+x[, (faccols) := lapply(.SD, as.factor), .SDcols = faccols]
+}
+)
+# year is a string including entries such as 2015-2019.
+lapply(1:length(Z), function(i) saveRDS(Z[[i]], paste0(pathsave, "Z", i, ".rds")))
+@
+<<state pop data from FRED, eval = F>>=
+library(fredr)
+# API key: b217eab60b09e11af2ebd7520a15243e
+fredr_set_key("b217eab60b09e11af2ebd7520a15243e")
+fred.states <- c("AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DC", "DE", 
+  "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", 
+  "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", 
+  "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", 
+  "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY")
+fred.pop <- lapply(1:length(fred.states), function(i)
+    fredr(series_id = paste0(fred.states[i], "POP"),
+      observation_start = as.Date("1900-01-01"),
+      observation_end = as.Date("2022-01-01")
+    )
+  )
+fred.pop <- lapply(fred.pop, data.table)
+fred.pop <- lapply(1:length(fred.pop), function(i) fred.pop[[i]][, State := fred.states[i]])
+fred.pop <- rbindlist(fred.pop)
+qsave(fred.pop, paste0(pathsave, "FredPop.qs"))
+@
+NBER has a project that compiled marriage data between 1968-1988 {\footnotesize (\url{https://www.nber.org/research/data/marriage-and-divorce-data-1968-1995-0})}.
+<<NBER marriage data, eval = F>>=
+# This takes a long time even using the iotools package. Do it only once.
+foldername <- list.dirs(path = pathsource, recursive = T, full.names = T)
+fn <- unique(list.files(path = foldername, pattern = "^marr.*dat$", recursive = T, full.names = T))
+source(paste0(path, "DictionaryMarriage.R"))
+# field length for 1968, 1969
+#endpos <- cumsum(fdlen[1:3])
+#begpos <- c(1, endpos[-length(endpos)] + 1)
+endpos <- cumsum(fdlen)
+begpos <- c(1, endpos[-length(endpos)] + 1)
+dicmarr <- data.table(vnames, begpos, endpos)
+dicmarr[, length := endpos-begpos + 1]
+dicmarr0 <- dicmarr[1:58, ]
+library(iotools)
+Z1 <- lapply(fn[1:2], input.file, formatter = dstrfw, col_types = rep("integer", nrow(dicmarr0)), 
+  widths = dicmarr0[, length])
+Z2 <- lapply(fn[-(1:2)], input.file, formatter = dstrfw, col_types = rep("integer", nrow(dicmarr)), 
+  widths = dicmarr[, length])
+Z1 <- lapply(Z1, data.table)
+Z2 <- lapply(Z2, data.table)
+Z1 <- lapply(1:length(Z1), function(i) Z1[[i]][, year := (1968:1969)[i]])
+Z2 <- lapply(1:length(Z2), function(i) Z2[[i]][, year := (1970:1990)[i]])
+Z1 <- rbindlist(Z1)
+Z2 <- rbindlist(Z2)
+Z <- rbindlist(list(Z2, Z1), use.names = T, fill = T)
+setnames(Z, c(dicmarr[, vnames], "year"))
+setkey(Z, year)
+#saveRDS(Z, paste0(pathsave, "mar.rds"))
+#r1 <- system.time(mar <- readRDS(paste0(pathsave, "mar.rds")))
+library(qs)
+qsave(Z, paste0(pathsave, "mar.qs"))
+# qs is faster, file size for Z is smaller than rds. Dominance.
+#r2 <- system.time(mar <- qread(paste0(pathsave, "mar.qs")))
+@
+<<NBER divorce data, eval = F>>=
+# This takes a long time even using the iotools package. Do it only once.
+foldername <- list.dirs(path = pathsource, recursive = T, full.names = T)
+fn <- unique(list.files(path = foldername, pattern = "^d.*dat$", recursive = T, full.names = T))
+source(paste0(path, "DictionaryDivorce.R"))
+#dd <- fread(paste0(path, "DictionaryDiv.prn"), skip = 1) # This is a dic not for divorce data.
+# field length for 1968, 1969
+endpos <- cumsum(fdlen)
+begpos <- c(1, endpos[-length(endpos)] + 1)
+dicdiv <- data.table(names = vnames, begpos, endpos, length = fdlen)
+dicdiv0 <- dicdiv[1:56, ]
+library(iotools)
+Z1 <- lapply(fn[1:2], input.file, formatter = dstrfw, col_types = rep("integer", nrow(dicdiv0)), 
+  widths = dicdiv0[, length])
+Z2 <- lapply(fn[-(1:2)], input.file, formatter = dstrfw, col_types = rep("integer", nrow(dicdiv)), 
+  widths = dicdiv[, length])
+Z1 <- lapply(Z1, data.table)
+Z2 <- lapply(Z2, data.table)
+Z1 <- lapply(1:length(Z1), function(i) Z1[[i]][, year := (1968:1969)[i]])
+Z2 <- lapply(1:length(Z2), function(i) Z2[[i]][, year := (1970:1988)[i]])
+Z1 <- rbindlist(Z1)
+Z2 <- rbindlist(Z2)
+Z <- rbindlist(list(Z2, Z1), use.names = T, fill = T)
+setnames(Z, c(dicdiv[, names], "year"))
+setkey(Z, year)
+library(qs)
+qsave(Z, paste0(pathsave, "div.qs"))
+@
+<<NBER US States, eval = F>>=
+library(qs)
+# Wikipedia's US states abbreviations
+# https://en.wikipedia.org/wiki/List_of_U.S._state_and_territory_abbreviations
+usst <- fread(paste0(pathsource,"NBER/docs/USStates.prn"))
+nst <- fread(paste0(pathsource,"NBER/docs/NBERStates.prn"), sep = "\t")
+nst <- data.table(nst[-(1:46)], as.numeric(unlist(nst[1:46])))
+setnames(nst, c("StateName", "StNum"))
+#  StateNum: 2-letter (and 2-digit) codes from the ANSI standard INCITS 38:2009 (supersedes FIPS 5-2)
+usst <- usst[, .(num, v3, name)]
+setnames(usst, c("StateNum", "State", "StateName"))
+# StNum: Code used in NBER DivMar data. Look up Marr90.pdf, p.8
+usst[, StNum := StateNum]
+usst[grep("Ari", StateName):nrow(usst), StNum := StateNum-1]
+usst[grep("Colo", StateName):nrow(usst), StNum := StateNum-2]
+usst[grep("Haw", StateName):nrow(usst), StNum := StateNum-3]
+usst[grep("Rho", StateName):nrow(usst), StNum := StateNum-4]
+# Washington is not in NBER marriage data
+usst[grep("Was", StateName):nrow(usst), StNum := 48]
+usst[grep("West", StateName):nrow(usst), StNum := 49]
+usst[grep("Wis", StateName):nrow(usst), StNum := 50]
+usst[grep("Wyo", StateName):nrow(usst), StNum := 51]
+usst[grep("Pue", StateName), StNum := 52]
+usst[grep("Virgin Is", StateName), StNum := 53]
+# YearDRA: year admitted to divorce registration area
+usst[, YearDRA := 1958]
+usst[grepl("Ka|Mary", StateName), YearDRA := 1959]
+usst[grepl("Conn|Mich|Miss", StateName), YearDRA := 1961]
+usst[grepl("Oh", StateName), YearDRA := 1962]
+usst[grepl("Rh", StateName), YearDRA := 1963]
+usst[grepl("Ill|Ver", StateName), YearDRA := 1968]
+usst[grepl("Ken|Yor", StateName), YearDRA := 1969]
+usst[grepl("South Ca", StateName), YearDRA := 1971]
+usst[grepl("Mass|Ham", StateName), YearDRA := 1979]
+usst[grepl("Del", StateName), YearDRA := 1981]
+usst[grepl("D.*C", StateName), YearDRA := 1986]
+# YearMRA: year admitted to marriage registration area
+usst[, YearMRA := 1957]
+usst[grepl("Ken", StateName), YearMRA := 1959]
+usst[grepl("D.*C|Ind|Mass", StateName), YearMRA := 1961]
+usst[grepl("Ill|N.*C", StateName), YearMRA := 1964]
+usst[grepl("West", StateName), YearMRA := 1965]
+usst[grepl("Miss", StateName), YearMRA := 1968]
+usst[grepl("Minn|S.*C", StateName), YearMRA := 1971]
+usst[grepl("Colo", StateName), YearMRA := 1979]
+# Merge usst and nst using StNum
+unst <- merge(usst, nst, by = "StNum", all = T)
+unst[is.na(StateName.y), ]
+unst <- merge(usst, nst, by = c("StNum", "StateName"), all = T)
+# New York has New York City (code 33) and New York State (code 33) entries in NBER states.
+# Drop these rows and retain only New York (code 33) from usst data. 
+qsave(usst, paste0(pathsave, "usst.qs"))
+qsave(unst, paste0(pathsave, "unst.qs"))
+# nber.states <- c(
+#   01, "Alabama", "AL"
+#   02, "Alaska", "AK",
+#   05, "California", "CA",
+#   06, "Colorado", "CO",
+#   07, "Connecticut", "CT",
+#   08, "Delaware", "DE",
+#   09, "DistrictofColumbia", "DC",
+#   10, "Florida", FL",
+#   11, "Georgia", "GA,"
+#   12, "Hawaii", "HI",
+#   13, "Idaho", "ID",
+#   14, "Illinois", "IL",
+#   15, "Indiana", "IN",
+#   16, "Iowa", "IA",
+#   17, "Kansas", "KS",
+#   18, "Kentucky", "KY",
+#   19, "Louisiana", "LA",
+#   20, "Maine", "ME",
+#   21, "Maryland", "MD",
+#   22, "Massachusetts", "MA",
+#   23, "Michigan", "MI",
+#   24, "Minnesota", "MN",
+#   25, "Mississippi", "MS",
+#   26, "Missouri", "MO",
+#   27, "Montana", "MT",
+#   28, "Nebraska", "NE",
+#   30, "NewHampshire", "NH",
+#   31, "NewJersey", "NJ",
+#   33, "NewYork", "NY",
+#   36, "Ohio", "OH",
+#   38, "Oregon", "OR",
+#   39, "Pennsylvania", "PA",
+#   40, "RhodeIsland", "RI",
+#   41, "SouthCarolina", "SC",
+#   42, "SouthDakota", "SD",
+#   43, "Tennessee", "TN",
+#   45, "Utah", "UT", 
+#   46, "Vermont", "VT",
+#   47, "Virginia", "VA", 
+#   50, "Wisconsin", "WI",
+#   51, "Wyoming", "WY"
+# )
+@
+Create state names in divorce and marriage data with a reference to marr88.pdf. \textsf{StNum} in usst data is \textsf{state} in divorce data.
+<<create state names, eval = F>>=
+library(qs)
+unst <- qread(paste0(pathsave, "unst.qs"))
+mar <- qread(paste0(pathsave, "mar.qs"))
+div <- qread(paste0(pathsave,"div.qs"))
+pop <- qread(paste0(pathsave, "FredPop.qs"))
+unst <- unst[!grepl("Yo.*State|Yo.*City", StateName), ]
+pop[, tee := 1:.N, by = State]
+setnames(div, "state", "StateID")
+setnames(unst, "StNum", "StateID")
+setkey(div, StateID); setkey(unst, StateID)
+unst[, grepout("StateNu", colnames(unst)) := NULL]
+# attach state names
+div2 <- merge(div, unst, by = "StateID", all.x = T, allow.cartesian = T)
+dw89 <- fread(paste0(pathsource, "NBER/docs/weights89.prn"), sep = "\t", skip = 1)
+div2[, DateDivorced := as.IDate(paste0(year, "-", month, "-1"), format = "%Y-%m-%d")]
+div2[, DateMarried := as.IDate(paste0(19, maryear, "-", marmonth, "-1"), format = "%Y-%m-%d")]
+div2[, Duration := DateDivorced - DateMarried] # in days
+div2[, HusResAway := "different"]
+div2[resstate.g == StateID, HusResAway := "same"]
+div2[grepl("55|56|57|59", resstate.g), HusResAway := "outside US"]
+div2[grepl("99", resstate.g), HusResAway := NA]
+div2[, WifResAway := "different"]
+div2[resstate.b == StateID, WifResAway := "same"]
+div2[grepl("55|56|57|59", resstate.b), WifResAway := "outside US"]
+div2[grepl("99", resstate.b), WifResAway := NA]
+addmargins(table0(div2[, .(WifResAway, HusResAway)]))
+qsave(div2, paste0(pathsave, "div2.qs"))
+setnames(mar, "state", "StateID")
+mar2 <- merge(mar, unst, by = "StateID", all.x = T, allow.cartesian = T)
+mar2[, DateMarried := as.IDate(paste0(year, "-", month, "-", day), format = "%Y-%m-%d")]
+qsave(mar2, paste0(pathsave, "mar2.qs"))
+# marriage, divorce by state, year
+# Drop Puerto Rico (State=NA) from marriage data
+mr <- mar2[!is.na(State), .(StateID = StateID[1], NumMar = .N, w=w[1]), by = .(State, year)]
+# Drop Virgin Islands from marriage data
+mr <- mr[!grepl("VI", State), ]
+# weight 100 is given number 1, weight 2 given 50, so it is inverse of weight that is given.
+# So we just multiply with w.
+mr[, total := NumMar*w]
+mr[, State := factor(paste0(putzeroontop(StateID), ".", State))]
+mr[grepl("NY", State) & year >= 1974 & year <= 1978, ]
+mr[, .(year, dNM=diff(total)/shift(total, n = 1L, type = "lag")), by = State][dNM > 1.2, ]
+mr[, .(year, dNM=diff(total)/shift(total, n = 1L, type = "lag")), by = State][dNM < -.2, ]
+dv <- div2[!is.na(State), .(StateID = StateID[1], NumDiv = .N, w=w[1]), by = .(State, year)]
+dv <- dv[!grepl("VI", State), ]
+dv[, total := NumDiv*w]
+dv[, State := factor(paste0(putzeroontop(StateID), ".", State))]
+qsave(mr, paste0(pathsave, "StateLevelMarriage.qs"))
+qsave(dv, paste0(pathsave, "StateLevelDivorce.qs"))
+@
+
+\subsection{Plots}
+
+<<number of marriage by state, warning = F, eval = F, fig.align='center', fig.height = 3, fig.width = 10, fig.cap = "Number of marriages by state", fig.lp = 'Figure '>>=
+library(ggplot2)
+g <- ggplot(data = mr, 
+    aes(x = year, y = total, group = State, colour = State)
+  ) + 
+  geom_line() +
+  scale_y_log10() +
+  scale_color_viridis_d()+
+  theme(
+    #legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.text=element_text(size=6),
+    legend.key.size=unit(.25, "cm"),
+    legend.title = element_blank()
+    ) +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(
+  paste0(pathsave, "NumberOfMarriagesByState.pdf")
+  , width = 14/2.54, height = 8/2.54)
+print(g)
+whatever <- dev.off()
+@
+<<number of divorce by state, warning = F, eval = F, fig.align='center', fig.height = 3, fig.width = 10, fig.cap = "Divorce by state", fig.lp = 'Figure '>>=
+library(ggplot2)
+g <- ggplot(data = dv, 
+    aes(x = year, y = total, group = State, colour = State)
+  ) + 
+  geom_line() +
+  scale_y_log10() +
+  scale_color_viridis_d()+
+  theme(
+    #legend.position = "bottom", 
+    legend.direction = "horizontal",
+    legend.text=element_text(size=6),
+    legend.key.size=unit(.25, "cm"),
+    legend.title = element_blank()
+    ) +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(
+  paste0(pathsave, "NumberOfDivorcesByState.pdf")
+  , width = 14/2.54, height = 8/2.54)
+print(g)
+whatever <- dev.off()
+@
+
+\mpage{\textwidth}{
+\hfil\textsc{Figure \refstepcounter{figure}\thefigure: Number of marriages by state (NBER)\label{NBER marriage}}\\
+\hfil\includegraphics[width=12cm]{\Sexpr{paste0(pathsave, "NumberOfMarriagesByState.pdf")}}
+}
+
+\mpage{\textwidth}{
+\hfil\textsc{Figure \refstepcounter{figure}\thefigure: Number of divorces by state (NBER)\label{NBER marriage}}\\
+\hfil\includegraphics[width=12cm]{\Sexpr{paste0(pathsave, "NumberOfDivorcesByState.pdf")}}
+}
+
+
+\section{Legal cases and political activities}
+
+<<Agustin1997 fn 18>>=
+# source("c:/seiro/settings/Rsetting/functions.R")
+fn18 <- fread(paste0(pathsource, "Augustine1997fn18.prn"), sep = "\t", header = T)
+remcollen <- 5
+fifthcol <- paste0("\\mpage{", remcollen, "cm}{\\footnotesize ", 
+    fn18[, remark], "\\hfill\\setlength{\\baselineskip}{10pt}}")
+fn18[, remark := fifthcol]
+setorder(fn18, year, state) # ordering is meaningful so do not sort?
+fn18tab <- latextab.simple(as.matrix(fn18), 
+  hleft = c(rep("\\hfill\\footnotesize ", 2), "\\hfil\\footnotesize ", rep("\\footnotesize ", 2)),
+  hcenter = c(3, 3, 2, .75, remcollen),
+  hright = c(rep("", 3), rep("\\hfill", 2)),
+  longtable = T, headercolor = "lightblue", alternatecolor = "gray90")
+write.tablev(fn18tab, paste0(pathsave, "Augustine1997Fn18.tex"), colnamestrue = F)
+@
+By 1971, Department of State's position: ``[t]he legal name of a married woman is her husband's surname.'' In addition, to quote from \textit{Walker v. Jackson}, 391 F. Supp. 1395 (E.D. Ark. 1975), 
+\begin{quotation}
+[T]he Supreme Court of the United States has recognized that a State may constitutionally require a married woman to use her husband's surname as her own for certain purposes, as for example obtaining a driver's license, if the State has a sufficiently compelling interest in imposing the requirement. \textit{Forbush v. Wallace}, Governor, 405 U.S. 970, 92 S. Ct. 1197, 31 L. Ed. 2d 246 (1972), aff'g without opinion, \textit{Forbush v. Wallace}, Governor, 341 F. Supp. 217 (M.D.Ala.1971).
+\end{quotation}
+Such a position in public offices have slowly changed. According to \citet[][p.6]{Augustine1997}, legal challenges in the 1970's ``firmly establised that ... her name is unchanged by the fact that marriage had occurred.'' ``By the late 1970's and early 1980's many state legislatures codified a woman's right to name herself.'' 
+
+The leading case was \textit{Dunn v. Palermo} in Tennessee (1975) that the State Supreme Court affirmed that women can register to vote under her maiden names. Additionally, in 1976, Florida District Court of Appeals noted that women are not compelled to change her name upon marriage (\textit{Marshall v. State}). Another leading case that recognizes the women's right to name is in Nebraska in 1978 (\textit{Simmons v. O'Brien}). In this case, the woman retained her former surnames during the marriage, then filed a divorce (marriage dissolution) to which the District Court denied the appeal because she did not file under husband's surname. The Trial Court reversed the District Court's decision and remanded with directions to accept the filing.
+
+Other scholar notes that a 1973 case in Maryland (\textit{Stuart v. Bd. of Supervisors of Elections for Howard County}) served as a guide, and a 1975 decision in Wisconsin (\textit{Kruzel v. Podell}) played a pivotal role across the US \citep[][fn 4]{MacDougall1985}. \textsc{Table \ref{TabMFn9}} lists all the formal cases and informal opinions by state judicial or state attorney generals affirming the right after 1972. In principle, one can date the year when the official common law practice shifted to affirm the right.\footnote{\href{https://law.justia.com/cases/federal/district-courts/FSupp/406/359/2143469/}{\textit{Allen v. Lovejoy}}, concluded in October 1975, however, notes that a woman who was suspended without pay due to noncompliance with Health Department's name change policy should not get compensation because she did not follow Department's advice to first change the name and appeal to the internal Merit System Council. Given the uncertainty of how MSC might have responded to plaintiff's appeal, the women's name right had not been fully protected until 1974 when the suspension was decided. } 
+
+
+Following is a summary of political activities that promote women's name rights \citep[][fn 5]{MacDougall1985}: 
+\begin{itemize}
+\vspace{1.0ex}\setlength{\itemsep}{1.0ex}\setlength{\baselineskip}{12pt}
+\item	The Center for a Woman's Own Name was established in 1973 after \textit{Kruzel v. Podell} case was appealed, and started distributing \textit{Booklet For Women Who Wish To Determine Their Own Names After Marriage}. 
+\item	In 1974, Olympia Brown League was formed to aid women in Milwaukee affected by the lower court's ruling. In 1972, Massachusetts women formed Name-Change at the time of \textit{Forbush} case\footnote{\textit{Forbush v. Wallace} (1972): A supreme court case that conceded that a woman's legal name is her husband's name. }. They also distributed a booklet titled \textit{Fact Sheet For Women Who Wish To Retain Their Own Name After Marriage}. 
+\item	In 1973, \textit{the Committee To Encourage Richard H. Austin To Give Michigan Women Their Middle Names For The Holidays (CERHA)} was formed with Attorney Jean L. King to support the right of women to obtain drivers' licenses using their birth names as middle names. 
+\item	In California, \textit{the Name Choice Center} distributed a fact sheet and promoted the issue with the Attorney General and the Legislature. The Center had a mailing list of over 15,000 by 1974. 
+\item	In 1974, \textit{The Women's Legal Defense Fund} in Washington, D.C. established a committee
+on names which published and distributed a booklet on women's names for D.C. area residents. 
+\end{itemize}
+
+
+<<MacDougall fn9>>=
+# source("c:/seiro/settings/Rsetting/functions.R")
+fn9 <- fread(paste0(pathsource, "MacDougall1985Fn9.prn"), sep = "\t", header = T)
+fn9[, sn := grepl("\\w", state)]
+fn9[, sn := cumsum(as.numeric(sn))]
+fn9[, state := state[1], by = sn]
+fn9[, sn := NULL]
+fn9[, year := sub(".*?(1[89]\\d\\d).*", "\\1", reference)]
+fn9[year == 1897, ] 
+# 38 S.W. 80, RICE v. STATE., Court of Criminal Appeals of Texas. January 13, 1897.
+# https://case-law.vlex.com/vid/rice-v-state-892223982
+setcolorder(fn9, c("state", "year", "case", "reference"))
+setorder(fn9, state, year)
+# https://www.courtlistener.com/opinion/1305054/laks-v-laks/
+fn9[grepl("Laks", case), reference := paste(reference, "[Seiro added: Divorced mother's right to rename children as MotherMaidenName-FatherSurName was rejected by the court.]")]
+fn9[grepl("Ark.*123", reference), reference := paste(reference, "[Seiro added: Under Arkansas law a married woman may retain her maiden name, and if Pamela Walker did not change her name when she married she was entitled to be registered under her maiden name. \\url{https://law.justia.com/cases/federal/district-courts/FSupp/391/1395/1494569/}]")]
+
+
+
+
+
+fn9tab <- latextab.simple(as.matrix(fn9), 
+  hleft = c("\\hfill\\footnotesize ", "\\footnotesize ", rep("\\footnotesize ", 2)),
+  hcenter = c(2.5, .75, 4, 6),
+  hright = c("", rep("\\hfill", 3)),
+  longtable = T, headercolor = "lightblue", alternatecolor = "gray90")
+write.tablev(fn9tab, paste0(pathsave, "MacDougall1985Fn9.tex"), colnamestrue = F)
+@
+
+
+
+
+\setcounter{table}{0}
+\hfil\textsc{Table \refstepcounter{table}\thetable: References in \citet{Augustine1997}}\label{TabAFn18}\\
+\setlength{\tabcolsep}{1pt}
+\hfil\input{\Sexpr{paste0(pathsave, "Augustine1997Fn18.tex")}}
+
+
+\hfil\textsc{Table \refstepcounter{table}\thetable: References in \citet{MacDougall1985}}\label{TabMFn9}\\
+\setlength{\tabcolsep}{1pt}
+\hfil\input{\Sexpr{paste0(pathsave, "MacDougall1985Fn9.tex")}}
+
+
+{\textsc{Table \ref{TabMFn9}} lists official opinions of judiciary on women's name right shown in \citet[][fn 9]{MacDougall1985}. The six states not listed, Colorado, Idaho, Nevada, New Mexico, Utah, and Wyoming, all recognize the right but have not circulated the opinions by 1985. State level recognition of women's name right led to a federal level concensus in 1982 that women should not be denied to open financial accounts under her birth-given surname as an interpretation of Equal Opportunity Credit Act [\href{https://www.ecfr.gov/current/title-12/chapter-II/subchapter-A/part-202/section-202.7#p-202.7(b)}{12 C.F.R. \textsection 202.7 (b) Designation of names}]. 
+
+According to \citet[][p.8]{Augustine1997}, state legal codes have been ammended that a married woman has a right to retain her maiden name.\footnote{Louisiana is unique that it takes a civil law perspective that ``[m]arriage does not change the name of either spouse'' \citep[][p.8]{Augustine1997}. }
+
+
+<<>>=
+p8 <- textConnection("
+Year State Law
+1997 Georgia 'GA Code Annex 19-3-33.1'
+1996  Guam 'Code 3018-3109'
+1996  Iowa 'Code Annex 595.5'
+1995 'North Dakota' 'Cent. Code 14-03-20.1'
+1995 Oregon 'Revised Statute 106.220'
+1993  Hawaii 'Revised Statute 574-1'
+1993  Massachusetts 'General Law Annex Chapter 46, 1D'")
+p8 <- read.table(p8, header = T)
+@
+
+\hfil\begin{tabular}{
+>{\hfill\footnotesize}p{1.2cm}<{}
+>{\hfill\footnotesize}p{2cm}<{}
+>{\hfil\footnotesize}p{5cm}<{}
+}
+\rowcolor{lightblue}
+\makebox[1.2cm]{\hfil Year} & \makebox[2cm]{\hfil State} &  Law\\
+1997 & Georgia & GA Code Annex 19-3-33.1\\
+1996  & Guam & Code 3018-3109\\
+1996  & Iowa & Code Annex 595.5\\
+1995 & North Dakota & Cent. Code 14-03-20.1 \\
+1995 & Oregon & Revised Statute 106.220 \\
+1993  & Hawaii & Revised Statute 574-1\\
+1993  & Massachusetts & General Law Annex Chapter 46, 1D
+\end{tabular}
+
+
+{\footnotesize\bibliographystyle{aer}
+\setlength{\baselineskip}{8pt}
+\bibliography{c:/seiro/settings/TeX/seiro}
+}
+
+\end{document}
+

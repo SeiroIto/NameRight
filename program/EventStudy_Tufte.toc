@@ -1,0 +1,19 @@
+\contentsline {section}{Read marriage/divorce files}{1}{section*.2}%
+\contentsline {subsection}{NCH marriage data is at state level but complete}{1}{section*.3}%
+\contentsline {section}{Estimation}{1}{section*.4}%
+\contentsline {subsection}{Identification strategy}{1}{section*.5}%
+\contentsline {subsection}{Checking data problems}{3}{section*.7}%
+\contentsline {subsection}{Marriage rates and divorce rates}{5}{section*.8}%
+\contentsline {subsection}{Event dates}{5}{section*.9}%
+\contentsline {section}{A technical note on how R's \texttt {lm} works using simulated data}{9}{section*.10}%
+\contentsline {subsection}{Multiple factors}{9}{section*.11}%
+\contentsline {subsection}{Multiple factors with interactions}{10}{section*.12}%
+\contentsline {subsection}{Multiple factors with trend and interactions}{12}{section*.13}%
+\contentsline {section}{Effects of normalisation choice}{13}{section*.14}%
+\contentsline {subsection}{Baseline \(\mitdelta _{-1}=0\) vs.\nobreakspace {}Miller recommend \(\bar {\mitdelta }_{<0}=0\)}{14}{section*.15}%
+\contentsline {subsection}{With trends: \(\mitdelta _{-1}=0\) vs.\nobreakspace {}\(\bar {\mitdelta }_{<0}=0\)}{16}{section*.16}%
+\contentsline {subsection}{State specific trends: \(\mitdelta _{-1}=0\) vs.\nobreakspace {}\(\bar {\mitdelta }_{<0}=0\)}{24}{section*.17}%
+\contentsline {subsection}{Veryfying the code with simulated data}{34}{section*.18}%
+\contentsline {subsubsection}{Using Bacon data}{34}{section*.19}%
+\contentsline {subsection}{Cubic trends}{37}{section*.20}%
+\contentsline {section}{Final remarks}{40}{section*.21}%

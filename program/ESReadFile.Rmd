@@ -1,0 +1,331 @@
+```{r read NCH marriage data, eval = T, warning = F}
+#### marriage
+ms <- fread(FPath("source/CDC-NCHS", "MarriageNCHS.prn"), 
+  header = T)
+m8 <- lapply(
+  list.files(grepout("ocr", list.dirs(Root, recursive = T)),
+  pattern = "8.c.*prn", full.names = T), fread, header = T)
+m8 <- lapply(m8, function(x) x[, 1:6])
+m8[[2]] <- m8[[2]][, -(2:3)]
+m8 <- Reduce(function(...) merge(..., all = TRUE), m8)
+m1 <- Reduce(function(...) merge(..., all = TRUE), list(ms, m8))
+setnames(m1, grepout("^1", colnames(m1)), 
+  paste0("v.", grepout("^1", colnames(m1))))
+m1L <- reshape(m1, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(m1)))
+setkey(m1L, time)
+m1LW <- reshape(m1L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = "v")
+setnames(m1LW, grepout("^v", colnames(m1LW)), 
+  gsub("^v.", "", grepout("^v", colnames(m1LW))))
+m1L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+m1L[, vs := v-m6165]
+m1L[, vs := vs/var(vs, na.rm = T)^(.5), by = .(StateName)]
+m1L[, m6165 := NULL]
+#### divorce data, marriage rate data follow the same steps, 
+#### so omitted from markdown.
+#### Tennessee: Halved in 1975? Check for NBER data integrity.
+t(m1LW[1972 <= time & time <= 1978, .(time, Tennessee)])
+```
+This shows Tennessee data seems to be fine. Number of marriage did not halve in 1975.^[NBER data show halving of numbers after 1975. This is why we do not use them.]  
+
+Display NAs in divorce data. There are some before 1959.  
+```{r read NCH divorce data, echo = F, warning = F}
+#### divorce
+ds <- fread(paste0(pathsource, "CDC-NCHS/divorce.prn"), 
+  header = T)
+d8 <- lapply(list.files(paste0(pathsource, "CDC-NCHS/ocr./"), 
+  pattern = "div.*prn", full.names = T), fread, header = T)
+d8 <- lapply(d8, function(x) x[, 1:7])
+d8[[2]] <- d8[[2]][, -c(2:3, 7)]
+d8[[3]] <- d8[[3]][, -7]
+d8 <- Reduce(function(...) merge(..., all = TRUE), d8)
+d1 <- Reduce(function(...) merge(..., all = TRUE), list(ds, d8))
+setnames(d1, grepout("^1", colnames(d1)), 
+  paste0("v.", grepout("^1", colnames(d1))))
+d1L <- reshape(d1, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(d1)))
+d1L[, v := as.numeric(v)]
+#### using Dunn v Palermo (1974) as reference year
+####d1L[, vs := v-v[time==1974], by = .(StateName)]
+#### using 1961-1965 as reference period
+d1L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+d1L[, vs := v-m6165]
+d1L[, vs := vs/var(vs, na.rm = T)^(.5), by = .(StateName)]
+d1L[, m6165 := NULL]
+setkey(d1L, time)
+d1LW <- reshape(d1L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = grepout("^v", colnames(d1L)))
+####setnames(d1LW, grepout("^v", colnames(d1LW)), 
+####  gsub("^v.", "", grepout("^v", colnames(d1LW))))
+#### Discard years before last NA in v, save it as d2L
+d1L[, LastNAYear := max(time[is.na(v)]), by = StateName]
+d1L[time == LastNAYear, ][order(StateName, time)]
+d2L <- d1L[time > LastNAYear, ]
+d1L[, LastNAYear := NULL]
+d2L[, LastNAYear := NULL]
+qsave(m1LW, paste0(pathsave, "marriage.qs"))
+qsave(m1L, paste0(pathsave, "m1L.qs"))
+qsave(d1LW, paste0(pathsave, "divorce.qs"))
+qsave(d1L, paste0(pathsave, "d1L.qs"))
+qsave(d2L, paste0(pathsave, "d2L.qs"))
+```
+```{r read NCH rate data, warning = F, echo = F}
+#### marriage rate
+ms <- fread(paste0(pathsource, "CDC-NCHS/MarriageRate.prn"), 
+  header = T)
+ms <- data.table(ms[, 1], sapply(ms[, -1], function(x) x/10))
+m8 <- lapply(list.files(paste0(pathsource, "CDC-NCHS/ocr./"), 
+  pattern = "8.c.*prn", full.names = T), fread, header = T)
+m8 <- lapply(m8, function(x) x[, c(1, 7:11), ])
+m8[[2]] <- m8[[2]][, -(2:3)]
+m8 <- Reduce(function(...) merge(..., all = TRUE), m8)
+m2 <- Reduce(function(...) merge(..., all = TRUE), list(ms, m8))
+setnames(m2, grepout("^1", colnames(m2)), 
+  paste0("v.", grepout("^1", colnames(m2))))
+m2L <- reshape(m2, direction = "long", idvar = "StateName", 
+  varying = grepout("^v", colnames(m2)))
+options(warn = 0)
+m2L[, v := as.numeric(v)]
+m2L[, vs := v/var(v)^(.5), by = .(StateName)]
+#### using Dunn v Palermo (1974) as reference year
+m2L[, vs := vs-vs[time==1974], by = .(StateName)]
+#### using 1961-1965 as reference period
+m2L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+m2L[, vs := v-m6165]
+m2L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+m2L[, m6165 := NULL]
+setkey(m2L, time)
+m2LW <- reshape(m2L, direction = "wide", idvar = "time", 
+  timevar = "StateName", v.names = grepout("^v", colnames(m2L)))
+setnames(m2LW, grepout("^v", colnames(m2LW)), 
+  gsub("^v.", "", grepout("^v", colnames(m2LW))))
+qsave(m2LW, paste0(pathsave, "marriagerate.qs"))
+qsave(m2L, paste0(pathsave, "m2L.qs"))
+```
+```{r implied pop divorce rate}
+#### implied population
+library(qs)
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m12L <- merge(m2L, m1L, by = c("StateName", "time"), all = T)
+m12L[, pop := round(v.y/(v.x/100), 0)]
+m12L <- m12L[, .(StateName, time, pop)]
+#### compute divorce rate
+d2L <- qread(paste0(pathsave, "d2L.qs"))
+d2L[, v := as.numeric(v)]
+d12L <- merge(d2L, m12L, by = c("StateName", "time"))
+setnames(d12L, "v", "case")
+d12L[, v := round((case/pop)*100, 1)]
+d12L[, m6165 := mean(v[1961 <= time & time <= 1965]), by = .(StateName)]
+d12L[, vs := v-m6165]
+d12L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+d12L[, m6165 := NULL]
+qsave(d12L, paste0(pathsave, "d12L.qs"))
+```
+
+In what follows, we plot Tenesse before and after *Dunn vs. Palermo* (1975) to eyeball any changes.  
+
+```{r Tennessee Dunn v Palermo 1975 plot 2, echo = F, fig.cap = "Number of marriages: Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F, warning = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+library(ggplot2)
+ThisTheme <-   theme(
+  legend.position = "bottom", 
+  legend.direction = "horizontal",
+  legend.text=element_text(size=6),
+  legend.key.size=unit(.25, "cm"),
+  legend.title = element_blank()
+  )
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|Nor.*C", StateName), ], 
+  aes(x = time, y = v, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_y_log10() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageLevels.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot standardized 1974 as zero, echo = F, fig.cap = "Number of marriages (standardized, 1974 = 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+#### 1974 as the reference period
+m1L[, vs := v-v[time==1974], by = .(StateName)]
+m1L[, vs := vs/var(vs)^(.5), by = .(StateName)]
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedLevels1974AsZero.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot standardized, echo = F, fig.cap = "Number of marriages (standardized, mean of 1961-65 as zero): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+m1L <- qread(paste0(pathsave, "m1L.qs"))
+g <- ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedLevels.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot rate standardized 1974 as zero, echo = F, fig.cap = "Marriage rates (standardized, 1974=0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+#### 1974 as the reference period
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m2l <- m2L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ]
+m2l[, vs := v-v[time==1974], by = .(StateName)]
+m2l[, vs := vs/var(vs)^(.5), by = .(StateName)]
+g <- ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedRates1974AsZero.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+```{r Tennessee Dunn v Palermo 1975 plot rate standardized, echo = F, fig.cap = "Marriage rates (standardized, mean of 1961-65 as 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.fullwidth = F}
+#### 1961-1965 as the reference period
+m2L <- qread(paste0(pathsave, "m2L.qs"))
+m2l <- m2L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ]
+g <- ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+pdf(file =  
+  paste0(pathsavefigure, "TennesseeMarriageStandardisedRates.pdf"),
+  , width = 2*8/2.54, height = 2*5/2.54, pointsize = 10) # native unit: inch
+print(g)
+whatever <- dev.off()
+```
+
+```{r plot horizontally aligned Tennessee, eval = F, echo = F, fig.show = "hold", fig.fullwidth = F, out.width = "49%"}
+#### 1961-1965 as the reference period
+ggplot(data = m2l, 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point(size = 2) +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+ggplot(data = m1L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+
+```
+
+Event-study plots of standardised marriage rates (left) and standardised marriages (right) in Tennessee and contiguous states. Standardisation takes mean of 1974 (top row) and 1961-65 as its mean (bottom row) and set to zero. Rate = marriages / 1000, where population is based on censuses (April 1 of 1960, 70, 80) and interpolated estimates of July 1 of each year. 
+
+```{r plot 1974AsZero pdf horizontally aligned Tennessee for pdf,  echo = F, fig.show = "hold", fig.fullwidth = F, out.height = "500mm", out.width = "575mm"}
+knitr::include_graphics(paste0(pathsavefigure, 
+  c(
+    "TennesseeMarriageStandardisedRates1974AsZero.pdf", 
+    "TennesseeMarriageStandardisedLevels1974AsZero.pdf"
+    #,
+    #"TennesseeMarriageLevels.pdf"
+    )), dpi = NA)
+```
+```{r raw plot pdf horizontally aligned Tennessee for pdf,  echo = F, fig.show = "hold", fig.fullwidth = F, out.height = "500mm", out.width = "575mm"}
+knitr::include_graphics(paste0(pathsavefigure, 
+  c(
+    "TennesseeMarriageStandardisedRates.pdf", 
+    "TennesseeMarriageStandardisedLevels.pdf"
+    #,
+    #"TennesseeMarriageLevels.pdf"
+    )), dpi = NA)
+```
+
+These plots indicate that Tennessee before Dunn v. Palermo had low marriage numbers in levels and in rates, and they elevated to one of the top in the group of states in 1972-1981. We cannot see any obvious impacts on marriages of Dunn v. Palermo from the plots. Divorce rates also do not seem to respond to Dunn v. Palermo for Tennessee. By a casual observation, marriage and divorce do not seem to be affected by asserting woman's name rights.
+
+```{r plot divorce Tennessee,  echo = F, warning = F, fig.cap = "Divorce rates (standardized, 1961-65 mean = 0): Tennessee and contiguous states before and after Dunn v. Palermo", fig.show = "hold", fig.fullwidth = F, out.width = "100%"}
+d12L <- qread(paste0(pathsave, "d12L.qs"))
+ggplot(data = d12L[grepl("Ten|Ken|Missi|Ark|Alab|Geor|^V.*a$|^Nor.*C", StateName)
+   & 1960 <= time & time <= 1987 , ], 
+  aes(x = time, y = vs, group = StateName, 
+    shape = StateName, colour = StateName)) + 
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = 0:10) +
+  geom_vline(xintercept = 1975, colour = "red") + 
+  scale_color_manual(values = c(
+    "Alabama" = "lightblue", "Arkansas" = "lightblue", 
+    "Georgia" = "lightblue", "Kentucky" = "lightblue", 
+    "Mississippi" = "lightblue", "North Carolina" = "lightblue", 
+    "Virginia" = "lightblue", "Tennessee" = "darkblue")) + ThisTheme +
+  guides(colour=guide_legend(ncol=2, byrow=F))
+
+```
+
+

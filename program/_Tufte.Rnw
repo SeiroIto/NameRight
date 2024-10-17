@@ -1,0 +1,140 @@
+---
+title: "Descriptive statistics of US marriage data"
+author: "Seiro Ito"
+date: "`r format(Sys.time(), '%Y年%m月%d日 %R')`"
+output:
+  tufte::tufte_html:
+    citation_package: natbib
+  pdf_document:
+     latex_engine: xelatex
+# tufte::tufte_handout: default
+    # tufte_features: ["fonts", "background", "italics"]
+header-includes:
+    - \usepackage{amsmath}
+    - \usepackage{amssymb}
+    - \usepackage{amsfonts}
+    - \usepackage{bookmark} 
+    - \usepackage{xltxtra} 
+    - \usepackage{zxjatype} 
+    - \usepackage[ipa]{zxjafont} 
+bibliography: c:/seiro/settings/Tex/seiro.bib
+link-citations: yes
+# path <- "c:/data/NameRight/"; 
+# rmarkdown::render(paste0(path, "DeStat_Tufte.Rmd"))
+# rmarkdown::render(paste0(path, "DeStat_Tufte.Rmd"), output_format = "pdf_document")
+---
+```{css, echo=FALSE}
+.SeiroBenign {
+  background-color: #FFEBCD;
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+.SeiroLightGreen {
+  background-color: #D0F0C0; /* Tea green */
+  padding: 0.5em; /*文字まわり（上下左右）の余白*/
+  font-family: Noto S	ans;
+  /* border: 1px solid yellow; */
+  /* font-weight: bold; */
+}
+```
+
+```{r setup, include=FALSE} 
+# include = F <==> echo=F & results = F
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'), 
+  margin_references = TRUE,
+  # remove leading hashes in html output
+  comment = "", class.source = "SeiroBenign", class.output = "SeiroLightGreen")
+options(htmltools.dir.version = FALSE)
+```
+```{r option setting 1, cache = F, child='c:/migrate/R/knitrPreamble/knitr_initial_option_setting_chunk.rnw'}
+```
+```{r option setting 2, cache = F, warning = F}
+opts_knit$set(base.dir = 'c:/data/NameRight/analysis/program/')
+opts_chunk$set(fig.path='figure/ReadData', cache.path='cache/ReadData', 
+cache = F, echo = F, results = 'markup', 
+tidy.opts=list(blank=FALSE, width.cutoff=40))
+options(digits = 6, width = 80)
+library(data.table)
+pathsource <- paste0(path0, "source/")
+pathsave <- paste0(path0, "save/")
+dir.create(pathsave)
+source("c:/seiro/settings/Rsetting/panel_estimator_functions.R")
+# source("c:/seiro/settings/Rsetting/functions.R")
+source(paste0(path, "tabulate_est_IPUMS.R"))
+@
+
+```{css echo=FALSE}
+/* Define a margin before hX (header level X) element */
+h1  {
+  margin-top: 3ex;
+  margin-bottom: 3ex;
+  /* background: #c2edff; */ /*背景色*/
+  padding: 0.5em;/*文字まわり（上下左右）の余白*/
+}
+h2  {
+  margin-top: 2ex;
+  margin-bottom: 2ex;
+  padding: 0.5em;/*文字周りの余白*/
+  color: #010101;/*文字色*/
+  /* background: #eaf3ff; */ /*背景色*/
+  /* border-bottom: solid 3px #516ab6; */ /*下線*/
+}
+```
+\def\Perp{\mkern2mu\rotatebox[origin=c]{90}{$\models$}\mkern2mu}
+\newcommand{\mpage}[2]{\begin{minipage}[t]{#1}#2\end{minipage}}
+\newcommand{\cnvp}{\stackrel{p}{\longrightarrow}}
+\newcommand{\cnvd}{\stackrel{d}{\longrightarrow}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\E}{{\Large\varepsilon}}
+\newcommand{\NU}{{\Large\nu}}
+\newcommand{\0}{{\mathbf{0}}}
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+\newcommand{\bfbeta}{\boldsymbol{\beta}}
+\newcommand{\bftheta}{\boldsymbol{\theta}}
+\newcommand{\bfeta}{\boldsymbol{\eta}}
+\newcommand{\bfmu}{\boldsymbol{\mu}}
+\newcommand{\bflambda}{\boldsymbol{\lambda}}
+\newcommand{\ind}{\mathrel{\perp\!\!\!\!\perp}}
+
+(労働市場力研究に関する要約)  
+
+
+\hfil Descriptive statistics of US marriage data\\
+
+\hfil\MonthDY\\
+\hfil{\footnotesize\currenttime}\\
+\renewcommand{\thefootnote}{*\arabic{footnote}}
+
+\hfil Seiro Ito
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\setlength{\parindent}{1em}
+\vspace{2ex}
+
+
+\section{Read files}
+
+<<>>=
+d2 <- qread(div2, paste0(pathsave, "div2.qs"))
+m2 <- qread(mar2, paste0(pathsave, "mar2.qs"))
+@
+
+{\footnotesize\bibliographystyle{aer}
+\setlength{\baselineskip}{8pt}
+\bibliography{c:/seiro/settings/TeX/seiro}
+}
+
+\end{document}
+

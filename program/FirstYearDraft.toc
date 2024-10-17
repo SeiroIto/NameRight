@@ -1,0 +1,7 @@
+\contentsline {section}{\numberline {I}Data}{1}{section.2}%
+\contentsline {subsection}{\numberline {I.1}Data source}{1}{subsection.3}%
+\contentsline {subsection}{\numberline {I.2}Plots}{2}{subsection.4}%
+\contentsline {section}{\numberline {II}Legal cases and political activities}{5}{section.11}%
+\contentsline {subsection}{\numberline {II.1}Legal cases}{5}{subsection.12}%
+\contentsline {subsection}{\numberline {II.2}Political activities}{13}{subsection.25}%
+\contentsline {section}{\numberline {A}Codes}{15}{appendix.29}%
